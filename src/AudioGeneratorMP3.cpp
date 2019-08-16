@@ -96,7 +96,7 @@ enum mad_flow AudioGeneratorMP3::ErrorToFlow()
   if ((lastReadPos==0) && (stream->error==MAD_ERROR_LOSTSYNC)) return MAD_FLOW_CONTINUE;
 
   strcpy_P(err, mad_stream_errorstr(stream));
-  snprintf_P(errLine, sizeof(errLine), PSTR("Decoding error '%s' at byte offset %d"),
+  m_snprintf(errLine, sizeof(errLine), _F("Decoding error '%s' at byte offset %d"),
            err, (stream->this_frame - buff) + lastReadPos);
   yield(); // Something bad happened anyway, ensure WiFi gets some time, too
   cb.st(stream->error, errLine);
@@ -283,67 +283,3 @@ bool AudioGeneratorMP3::begin(AudioFileSource *source, AudioOutput *output)
   running = true;
   return true;
 }
-
-// The following are helper routines for use in libmad to check stack/heap free
-// and to determine if there's enough stack space to allocate some blocks there
-// instead of precious heap.
-
-#undef stack
-extern "C" {
-#ifdef ESP32
-  //TODO - add ESP32 checks
-  void stack(const char *s, const char *t, int i)
-  {
-  }
-  int stackfree()
-  {
-    return 8192;
-  }
-#elif defined(ESP8266)
-  #include <cont.h>
-  extern cont_t g_cont;
-
-  void stack(const char *s, const char *t, int i)
-  {
-    (void) t;
-    (void) i;
-    register uint32_t *sp asm("a1");
-    int freestack = 4 * (sp - g_cont.stack);
-    int freeheap = ESP.getFreeHeap();
-    if ((freestack < 512) || (freeheap < 5120)) {
-      static int laststack, lastheap;
-      if (laststack!=freestack|| lastheap !=freeheap) {
-        audioLogger->printf_P(PSTR("%s: FREESTACK=%d, FREEHEAP=%d\n"), s, /*t, i,*/ freestack, /*cont_get_free_stack(&g_cont),*/ freeheap);
-      }
-      if (freestack < 256) {
-        audioLogger->printf_P(PSTR("out of stack!\n"));
-      }
-      if (freeheap < 1024) {
-        audioLogger->printf_P(PSTR("out of heap!\n"));
-      }
-      Serial.flush();
-      laststack = freestack;
-      lastheap = freeheap;
-    }
-  }
-
-  int stackfree()
-  {
-    register uint32_t *sp asm("a1");
-    int freestack = 4 * (sp - g_cont.stack);
-    return freestack;
-  }
-#else
-  void stack(const char *s, const char *t, int i)
-  {
-    (void) s;
-    (void) t;
-    (void) i;
-  }
-  int stackfree()
-  {
-    return 8192;
-  }
-#endif
-}
-

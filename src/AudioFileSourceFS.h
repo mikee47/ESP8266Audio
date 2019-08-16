@@ -27,6 +27,7 @@
 class AudioFileSourceFS : public AudioFileSource
 {
 public:
+	AudioFileSourceFS() = default;
 	AudioFileSourceFS(const char* filename);
 	~AudioFileSourceFS();
 	bool open(const char* filename) override;

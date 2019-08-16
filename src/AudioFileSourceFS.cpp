@@ -35,25 +35,25 @@ AudioFileSourceFS::~AudioFileSourceFS()
 
 bool AudioFileSourceFS::open(const char* filename)
 {
-	handle = fileOpen(filename, eFO_ReadOnly);
-	return handle >= 0;
+	file = fileOpen(filename, eFO_ReadOnly);
+	return file >= 0;
 }
 
 uint32_t AudioFileSourceFS::AudioFileSourceFS::read(void* data, uint32_t len)
 {
-	int res = fileRead(handle, data, len);
+	int res = fileRead(file, data, len);
 	return (res >= 0) ? res : 0;
 }
 
 bool AudioFileSourceFS::seek(int32_t pos, int dir)
 {
-	return fileSeek(pos, dir) == SPIFFS_OK;
+	return fileSeek(file, pos, SeekOriginFlags(dir)) == SPIFFS_OK;
 }
 
 bool AudioFileSourceFS::close()
 {
-	fileClose(handle);
-	handle = -1;
+	fileClose(file);
+	file = -1;
 	return true;
 }
 
@@ -75,6 +75,6 @@ uint32_t AudioFileSourceFS::getSize()
 
 uint32_t AudioFileSourceFS::getPos()
 {
-	int pos = fileTell(handle);
+	int pos = fileTell(file);
 	return (pos >= 0) ? pos : 0;
 }
