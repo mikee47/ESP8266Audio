@@ -18,28 +18,19 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTSPIFFSWAV_H
-#define _AUDIOOUTPUTSPIFFSWAV_H
+#pragma once
 
-#include <Arduino.h>
-#include <FS.h>
+#include <FileSystem.h>
+#include "AudioOutputWAV.h"
 
-#include "AudioOutput.h"
-
-class AudioOutputSPIFFSWAV : public AudioOutput
+class AudioOutputSPIFFSWAV : public AudioOutputWAV
 {
-  public:
-    AudioOutputSPIFFSWAV() { filename = NULL; };
-    ~AudioOutputSPIFFSWAV() { free(filename); };
-    virtual bool begin() override;
-    virtual bool ConsumeSample(int16_t sample[2]) override;
-    virtual bool stop() override;
-    void SetFilename(const char *name);
+public:
+	bool open(const String& filename) override;
+	bool write(const void* src, size_t size) override;
+	bool rewind() override;
+	void close() override;
 
-  private:
-    File f;
-    char *filename;
+private:
+	file_t file = -1;
 };
-
-#endif
-

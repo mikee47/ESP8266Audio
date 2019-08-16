@@ -19,12 +19,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCESTDIO_H
-#define _AUDIOFILESOURCESTDIO_H
-
-#include <Arduino.h>
-
-#ifndef ARDUINO
+#pragma once
 
 #include "AudioFileSource.h"
 
@@ -41,13 +36,8 @@ class AudioFileSourceSTDIO : public AudioFileSource
     virtual bool close() override;
     virtual bool isOpen() override;
     virtual uint32_t getSize() override;
-    virtual uint32_t getPos() override { if (!f) return 0; else return (uint32_t)ftell(f); };
+    virtual uint32_t getPos() override
 
-  private:
-    FILE *f;
+private:
+    FILE *f = nullptr;
 };
-
-#endif // !ARDUINO
-
-#endif
-

@@ -22,81 +22,30 @@
 #include "AudioOutputSTDIO.h"
 #include <unistd.h>
 
-static const uint8_t wavHeaderTemplate[] PROGMEM = { // Hardcoded simple WAV header with 0xffffffff lengths all around
-    0x52, 0x49, 0x46, 0x46, 0xff, 0xff, 0xff, 0xff, 0x57, 0x41, 0x56, 0x45,
-    0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x22, 0x56, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x04, 0x00, 0x10, 0x00,
-    0x64, 0x61, 0x74, 0x61, 0xff, 0xff, 0xff, 0xff };
-
-bool AudioOutputSTDIO::begin()
+bool AudioOutputSTDIO::open(const String& filename)
 {
-  uint8_t wavHeader[sizeof(wavHeaderTemplate)];
-  memset(wavHeader, 0, sizeof(wavHeader));
-
-  if (f) return false; // Already open!
-  unlink(filename.c_str());
-  f = fopen(filename.c_str(), "wb+");
-  if (!f) return false;
-  
-  // We'll fix the header up when we close the file
-  fwrite(wavHeader, sizeof(wavHeader), 1, f);
-  return true;
+	if(f != nullptr) {
+		return false; // Already open
+	}
+	unlink(filename.c_str());
+	f = fopen(filename.c_str(), "wb+");
+	return f != nullptr;
 }
 
-bool AudioOutputSTDIO::ConsumeSample(int16_t sample[2])
+void AudioOutputSTDIO::close()
 {
-  for (int i=0; i<channels; i++) {
-    if (bps == 8) {
-      uint8_t l = sample[i] & 0xff;
-      fwrite(&l, sizeof(l), 1, f);
-    } else {
-      uint8_t l = sample[i] & 0xff;
-      uint8_t h = (sample[i] >> 8) & 0xff;
-      fwrite(&l, sizeof(l), 1, f);
-      fwrite(&h, sizeof(h), 1, f);
-    }
-  }
-  return true;
+	if(f != nullptr) {
+		fclose(f);
+		f = nullptr;
+	}
 }
 
-
-bool AudioOutputSTDIO::stop()
+bool AudioOutputSTDIO::write(const void* src, size_t size)
 {
-  uint8_t wavHeader[sizeof(wavHeaderTemplate)];
+	return fwrite(src, size, 1, f) == 1;
+}
 
-  memcpy_P(wavHeader, wavHeaderTemplate, sizeof(wavHeaderTemplate));
-
-  int chunksize = ftell(f) - 8;
-  wavHeader[4] = chunksize & 0xff;
-  wavHeader[5] = (chunksize>>8)&0xff;
-  wavHeader[6] = (chunksize>>16)&0xff;
-  wavHeader[7] = (chunksize>>24)&0xff;
-
-  wavHeader[22] = channels & 0xff;
-  wavHeader[23] = 0;
-
-  wavHeader[24] = hertz & 0xff;
-  wavHeader[25] = (hertz >> 8) & 0xff;
-  wavHeader[26] = (hertz >> 16) & 0xff;
-  wavHeader[27] = (hertz >> 24) & 0xff;
-  int byteRate = hertz * bps * channels / 8;
-  wavHeader[28] = byteRate & 0xff;
-  wavHeader[29] = (byteRate >> 8) & 0xff;
-  wavHeader[30] = (byteRate >> 16) & 0xff;
-  wavHeader[31] = (byteRate >> 24) & 0xff;
-  wavHeader[32] = channels * bps / 8;
-  wavHeader[33] = 0;
-  wavHeader[34] = bps;
-  wavHeader[35] = 0;
-
-  int datasize = ftell(f) - sizeof(wavHeader);
-  wavHeader[40] = datasize & 0xff;
-  wavHeader[41] = (datasize>>8)&0xff;
-  wavHeader[42] = (datasize>>16)&0xff;
-  wavHeader[43] = (datasize>>24)&0xff;
-
-  // Write real header out
-  fseek(f, 0, SEEK_SET);
-  fwrite(wavHeader, sizeof(wavHeader), 1, f);
-  fclose(f);
-  return true;
+bool AudioOutputSTDIO::rewind()
+{
+	return fseek(f, 0, SEEK_SET) == 0;
 }

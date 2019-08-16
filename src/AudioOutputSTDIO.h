@@ -21,25 +21,18 @@
 
 #pragma once
 
-#include <WString.h>
-#include <stdbool.h>
 #include <stdio.h>
 
-#include "AudioOutput.h"
+#include "AudioOutputWAV.h"
 
-class AudioOutputSTDIO : public AudioOutput
+class AudioOutputSTDIO : public AudioOutputWAV
 {
-  public:
-    bool begin() override;
-    bool ConsumeSample(int16_t sample[2]) override;
-    bool stop() override;
+public:
+	bool open(const String& filename) override;
+	bool write(const void* src, size_t size) override;
+	bool rewind() override;
+	void close() override;
 
-    void SetFilename(const char *name)
-    {
-    	filename = name;
-    }
-
-  private:
-    FILE *f = nullptr;
-    String filename;
+private:
+	FILE* f = nullptr;
 };

@@ -94,5 +94,14 @@ uint32_t AudioFileSourceSTDIO::getSize()
   return len;
 }
 
+uint32_t getPos()
+{
+	if(f == nullptr) {
+		return 0;
+	}
+	int pos = ftell(f);
+	return (pos >= 0) ? pos : 0;
+}
+
 
 #endif

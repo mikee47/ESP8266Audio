@@ -1,7 +1,7 @@
 /*
-  AudioFileSourceFS
-  Input Arduion "file" to be used by AudioGenerator
-  
+  AudioOutputWAV
+  Outputs audio in WAV format
+
   Copyright (C) 2017  Earle F. Philhower, III
 
   This program is free software: you can redistribute it and/or modify
@@ -18,23 +18,38 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCESPIFFS_H
-#define _AUDIOFILESOURCESPIFFS_H
+#pragma once
 
-#include <Arduino.h>
-#include <FS.h>
+#include <WString.h>
+#include <stdbool.h>
+#include <stdio.h>
 
-#include "AudioFileSource.h"
-#include "AudioFileSourceFS.h"
+#include "AudioOutput.h"
 
-class AudioFileSourceSPIFFS : public AudioFileSourceFS
+class AudioOutputWAV : public AudioOutput
 {
-  public:
-    AudioFileSourceSPIFFS() : AudioFileSourceFS(SPIFFS) { };
-    AudioFileSourceSPIFFS(const char *filename) : AudioFileSourceFS(SPIFFS, filename) {};
-    // Others are inherited from base
+public:
+	~AudioOutputWAV()
+	{
+		close();
+	}
+	bool begin() override;
+	bool ConsumeSample(int16_t sample[2]) override;
+	bool stop() override;
+
+	virtual bool open(const String& filename) = 0;
+	virtual bool write(const void* src, size_t size) = 0;
+	virtual bool rewind() = 0;
+	virtual void close()
+	{
+	}
+
+	void SetFilename(const char* name)
+	{
+		filename = name;
+	}
+
+private:
+	String filename;
+	size_t filePos = 0;
 };
-
-
-#endif
-
