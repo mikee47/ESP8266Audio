@@ -19,10 +19,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <Arduino.h>
-
-#ifndef ARDUINO
-
 #include "AudioOutputSTDIO.h"
 #include <unistd.h>
 
@@ -31,20 +27,14 @@ static const uint8_t wavHeaderTemplate[] PROGMEM = { // Hardcoded simple WAV hea
     0x66, 0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x22, 0x56, 0x00, 0x00, 0x88, 0x58, 0x01, 0x00, 0x04, 0x00, 0x10, 0x00,
     0x64, 0x61, 0x74, 0x61, 0xff, 0xff, 0xff, 0xff };
 
-void AudioOutputSTDIO::SetFilename(const char *name)
-{
-  free(filename);
-  filename = strdup(name);
-}
-
 bool AudioOutputSTDIO::begin()
 {
   uint8_t wavHeader[sizeof(wavHeaderTemplate)];
   memset(wavHeader, 0, sizeof(wavHeader));
 
   if (f) return false; // Already open!
-  unlink(filename);
-  f = fopen(filename, "wb+");
+  unlink(filename.c_str());
+  f = fopen(filename.c_str(), "wb+");
   if (!f) return false;
   
   // We'll fix the header up when we close the file
@@ -110,6 +100,3 @@ bool AudioOutputSTDIO::stop()
   fclose(f);
   return true;
 }
-
-#endif
- 

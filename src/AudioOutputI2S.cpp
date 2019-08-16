@@ -201,6 +201,7 @@ bool AudioOutputI2S::stop()
 #ifdef ESP32
   i2s_zero_dma_buffer((i2s_port_t)portNo);
 #endif
+  i2s_zero_dma_buffer();
   return true;
 }
 

@@ -19,29 +19,27 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTSTDIO_H
-#define _AUDIOOUTPUTSTDIO_H
+#pragma once
 
-#include <Arduino.h>
-#ifndef ARDUINO
+#include <WString.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include "AudioOutput.h"
 
 class AudioOutputSTDIO : public AudioOutput
 {
   public:
-    AudioOutputSTDIO() { filename = NULL; f = NULL; };
-    ~AudioOutputSTDIO() { free(filename); };
-    virtual bool begin() override;
-    virtual bool ConsumeSample(int16_t sample[2]) override;
-    virtual bool stop() override;
-    void SetFilename(const char *name);
+    bool begin() override;
+    bool ConsumeSample(int16_t sample[2]) override;
+    bool stop() override;
+
+    void SetFilename(const char *name)
+    {
+    	filename = name;
+    }
 
   private:
-    FILE *f;
-    char *filename;
+    FILE *f = nullptr;
+    String filename;
 };
-
-#endif
-
-#endif
