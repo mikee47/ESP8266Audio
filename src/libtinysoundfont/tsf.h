@@ -1257,7 +1257,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, float* outputBuffer, i
 
 
 void DumpF32P32(char *name, long long x) {
-  printf("%s = %08x.%08x\n", name, (int32_t)((x>>32)&0xffffffff), (int32_t)(x&0xffffffff));
+  debug_i("%s = %08x.%08x\n", name, (int32_t)((x>>32)&0xffffffff), (int32_t)(x&0xffffffff));
 }
 static void tsf_voice_render_fast(tsf* f, struct tsf_voice* v, short* outputBuffer, int numSamples)
 {
@@ -1525,7 +1525,7 @@ TSFDEF void tsf_note_on(tsf* f, int preset, int key, float vel)
 			f->voices = (struct tsf_voice*)TSF_REALLOC(f->voices, f->voiceNum * sizeof(struct tsf_voice));
 			if (!f->voices) {
 				f->voices = saveVoice;
-				printf("OOM, no room for new voice.  Ignoring note_on\n");
+				debug_w("OOM, no room for new voice.  Ignoring note_on\n");
 				return;
 			}
 			voice = &f->voices[f->voiceNum - 4];

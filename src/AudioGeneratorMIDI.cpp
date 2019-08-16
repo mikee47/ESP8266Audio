@@ -342,7 +342,7 @@ void AudioGeneratorMIDI::PrepareMIDI(AudioFileSource *src)
 
   hdrptr = buffer.tell (buffer.data);  /* pointer to file and track headers */
   process_header ();
-  printf ("  Processing %d tracks.\n", num_tracks);
+  debug_i("  Processing %d tracks.\n", num_tracks);
   if (num_tracks > MAX_TRACKS)
     midi_error ("Too many tracks", buffer.tell (buffer.data));
 
@@ -489,13 +489,12 @@ void AudioGeneratorMIDI::StopMIDI()
 
   buffer.close(buffer.data);
   tsf_close(g_tsf);
-  printf ("  %s %d tone generators were used.\n",
+  debug_i("  %s %d tone generators were used.\n",
           num_tonegens_used < num_tonegens ? "Only" : "All", num_tonegens_used);
   if (notes_skipped)
-    printf
-    ("  %d notes were skipped because there weren't enough tone generators.\n", notes_skipped);
+    debug_w("  %d notes were skipped because there weren't enough tone generators.\n", notes_skipped);
 
-  printf ("  Done.\n");
+  debug_i("  Done.\n");
 }
 
 
