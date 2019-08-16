@@ -23,51 +23,58 @@
 #include "SPIFFS.h"
 #endif
 
-AudioFileSourceFS::AudioFileSourceFS(FS &fs, const char *filename)
+AudioFileSourceFS::AudioFileSourceFS(const char* filename)
 {
-  filesystem = &fs;
-  open(filename);
-}
-
-bool AudioFileSourceFS::open(const char *filename)
-{
-#ifndef ESP32
-  filesystem->begin();
-#endif
-  f = filesystem->open(filename, "r");
-  return f;
+	open(filename);
 }
 
 AudioFileSourceFS::~AudioFileSourceFS()
 {
-  if (f) f.close();
+	close();
 }
 
-uint32_t AudioFileSourceFS::read(void *data, uint32_t len)
+bool AudioFileSourceFS::open(const char* filename)
 {
-  return f.read(reinterpret_cast<uint8_t*>(data), len);
+	handle = fileOpen(filename, eFO_ReadOnly);
+	return handle >= 0;
+}
+
+uint32_t AudioFileSourceFS::AudioFileSourceFS::read(void* data, uint32_t len)
+{
+	int res = fileRead(handle, data, len);
+	return (res >= 0) ? res : 0;
 }
 
 bool AudioFileSourceFS::seek(int32_t pos, int dir)
 {
-  return f.seek(pos, (dir==SEEK_SET)?SeekSet:(dir==SEEK_CUR)?SeekCur:SeekEnd);
+	return fileSeek(pos, dir) == SPIFFS_OK;
 }
 
 bool AudioFileSourceFS::close()
 {
-  f.close();
-  return true;
+	fileClose(handle);
+	handle = -1;
+	return true;
 }
 
 bool AudioFileSourceFS::isOpen()
 {
-  return f?true:false;
+	return file >= 0;
 }
 
 uint32_t AudioFileSourceFS::getSize()
 {
-  if (!f) return 0;
-  return f.size();
+	int pos = fileTell(file);
+	if(pos < 0) {
+		return 0;
+	}
+	int size = fileSeek(file, 0, eSO_FileEnd);
+	fileSeek(file, pos, eSO_FileStart);
+	return (size >= 0) ? size : 0;
 }
 
-
+uint32_t AudioFileSourceFS::getPos()
+{
+	int pos = fileTell(handle);
+	return (pos >= 0) ? pos : 0;
+}

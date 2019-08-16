@@ -21,31 +21,24 @@
 #ifndef _AUDIOFILESOURCEFS_H
 #define _AUDIOFILESOURCEFS_H
 
-#include <Arduino.h>
-#include <FS.h>
-
+#include <FileSystem.h>
 #include "AudioFileSource.h"
 
 class AudioFileSourceFS : public AudioFileSource
 {
-  public:
-    AudioFileSourceFS(FS &fs) { filesystem = &fs; }
-    AudioFileSourceFS(FS &fs, const char *filename);
-    virtual ~AudioFileSourceFS() override;
-    
-    virtual bool open(const char *filename) override;
-    virtual uint32_t read(void *data, uint32_t len) override;
-    virtual bool seek(int32_t pos, int dir) override;
-    virtual bool close() override;
-    virtual bool isOpen() override;
-    virtual uint32_t getSize() override;
-    virtual uint32_t getPos() override { if (!f) return 0; else return f.position(); };
+public:
+	AudioFileSourceFS(const char* filename);
+	~AudioFileSourceFS();
+	bool open(const char* filename) override;
+	uint32_t read(void* data, uint32_t len) override;
+	bool seek(int32_t pos, int dir) override;
+	bool close() override;
+	bool isOpen() override;
+	uint32_t getSize() override;
+	uint32_t getPos() override;
 
-  private:
-    FS *filesystem;
-    File f;
+private:
+	file_t file = -1;
 };
 
-
 #endif
-
