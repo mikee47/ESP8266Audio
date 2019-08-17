@@ -18,22 +18,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTSERIALWAV_H
-#define _AUDIOOUTPUTSERIALWAV_H
+#pragma once
 
-#include "AudioOutput.h"
+#include "AudioOutputWAV.h"
 
-class AudioOutputSerialWAV : public AudioOutput
+class AudioOutputSerialWAV : public AudioOutputWAV
 {
 public:
-	AudioOutputSerialWAV(){};
-	~AudioOutputSerialWAV(){};
-	virtual bool begin() override;
-	virtual bool ConsumeSample(int16_t sample[2]) override;
-	virtual bool stop() override;
+	bool begin() override;
 
-private:
-	int count;
+protected:
+	bool write(const void* src, size_t size) override;
 };
-
-#endif

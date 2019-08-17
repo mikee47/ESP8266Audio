@@ -18,52 +18,55 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTMIXER_H
-#define _AUDIOOUTPUTMIXER_H
+#pragma once
 
 #include "AudioOutput.h"
 
-class AudioOutputMixer;
-
-// The output stub exported by the mixer for use by the generator
-class AudioOutputMixerStub : public AudioOutput
-{
-public:
-	AudioOutputMixerStub(AudioOutputMixer* sink, int id);
-	virtual ~AudioOutputMixerStub() override;
-	virtual bool SetRate(int hz) override;
-	virtual bool SetBitsPerSample(int bits) override;
-	virtual bool SetChannels(int channels) override;
-	virtual bool begin() override;
-	virtual bool ConsumeSample(int16_t sample[2]) override;
-	virtual bool stop() override;
-
-protected:
-	AudioOutputMixer* parent;
-	int id;
-};
+class AudioOutputMixerStub;
 
 // Single mixer object per output
 class AudioOutputMixer : public AudioOutput
 {
 public:
 	AudioOutputMixer(int samples, AudioOutput* sink);
-	virtual ~AudioOutputMixer() override;
-	virtual bool SetRate(int hz) override;
-	virtual bool SetBitsPerSample(int bits) override;
-	virtual bool SetChannels(int channels) override;
-	virtual bool begin() override;
-	virtual bool ConsumeSample(int16_t sample[2]) override;
-	virtual bool stop() override;
-	virtual bool loop() override; // Send all existing samples we can to I2S
+	~AudioOutputMixer();
 
-	AudioOutputMixerStub* NewInput(); // Get a new stub to pass to a generator
+	// Most "standard" interfaces should fail, only MixerStub should be able to talk to us
+	bool SetRate(int hz) override
+	{
+		(void)hz;
+		return false;
+	}
+
+	bool SetBitsPerSample(int bits) override
+	{
+		(void)bits;
+		return false;
+	}
+
+	bool SetChannels(int channels) override
+	{
+		(void)channels;
+		return false;
+	}
+
+	bool ConsumeSample(int16_t sample[2]) override
+	{
+		(void)sample;
+		return false;
+	}
+
+	// Send all existing samples we can to output
+	bool loop() override;
+
+	AudioOutput* NewInput(); // Get a new stub to pass to a generator
 
 	// Stub called functions
 	friend class AudioOutputMixerStub;
 
 private:
 	void RemoveInput(int id);
+
 	bool SetRate(int hz, int id);
 	bool SetBitsPerSample(int bits, int id);
 	bool SetChannels(int channels, int id);
@@ -72,16 +75,14 @@ private:
 	bool stop(int id);
 
 protected:
-	enum { maxStubs = 8 };
-	AudioOutput* sink;
-	bool sinkStarted;
-	int16_t buffSize;
-	int32_t* leftAccum;
-	int32_t* rightAccum;
+	static constexpr unsigned maxStubs = 8;
+	AudioOutput* sink = nullptr;
+	bool sinkStarted = false;
+	int16_t buffSize = 0;
+	int32_t* leftAccum = nullptr;
+	int32_t* rightAccum = nullptr;
 	bool stubAllocated[maxStubs];
 	bool stubRunning[maxStubs];
 	int16_t writePtr[maxStubs]; // Array of pointers for allocated stubs
 	int16_t readPtr;
 };
-
-#endif

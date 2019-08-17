@@ -20,96 +20,78 @@
 
 #include "AudioGeneratorWAV.h"
 
-AudioGeneratorWAV::AudioGeneratorWAV()
-{
-	running = false;
-	file = NULL;
-	output = NULL;
-	buffSize = 128;
-	buff = NULL;
-	buffPtr = 0;
-	buffLen = 0;
-}
+#define FAILED(fmt, ...)                                                                                               \
+	AUDIO_ERROR(fmt, ##__VA_ARGS__);                                                                                   \
+	return false;
 
-AudioGeneratorWAV::~AudioGeneratorWAV()
-{
-	free(buff);
-	buff = NULL;
-}
+#define READ_FAILED(desc)                                                                                              \
+	AUDIO_ERROR("Read failed (%s)", _F(desc));                                                                         \
+	return false;
 
 bool AudioGeneratorWAV::stop()
 {
-	if(!running)
+	if(!running) {
 		return true;
+	}
 	running = false;
-	free(buff);
-	buff = NULL;
 	output->stop();
 	return file->close();
-}
-
-bool AudioGeneratorWAV::isRunning()
-{
-	return running;
 }
 
 // Handle buffered reading, reload each time we run out of data
 bool AudioGeneratorWAV::GetBufferedData(int bytes, void* dest)
 {
-	if(!running)
-		return false; // Nothing to do here!
-	uint8_t* p = reinterpret_cast<uint8_t*>(dest);
+	if(!running) {
+		return false; // Nothing to do here
+	}
+	auto p = static_cast<uint8_t*>(dest);
 	while(bytes--) {
 		// Potentially load next batch of data...
 		if(buffPtr >= buffLen) {
 			buffPtr = 0;
-			uint32_t toRead = availBytes > buffSize ? buffSize : availBytes;
+			uint32_t toRead = std::min(availBytes, buffSize);
 			buffLen = file->read(buff, toRead);
 			availBytes -= buffLen;
 		}
-		if(buffPtr >= buffLen)
-			return false; // No data left!
-		*(p++) = buff[buffPtr++];
+		if(buffPtr >= buffLen) {
+			return false; // No data left
+		}
+		*p++ = buff[buffPtr++];
 	}
 	return true;
 }
 
 bool AudioGeneratorWAV::loop()
 {
-	if(!running)
-		goto done; // Nothing to do here!
-
-	// First, try and push in the stored sample.  If we can't, then punt and try later
-	if(!output->ConsumeSample(lastSample))
-		goto done; // Can't send, but no error detected
-
-	// Try and stuff the buffer one sample at a time
-	do {
+	while(running && output->ConsumeSample(lastSample)) {
 		if(bitsPerSample == 8) {
 			uint8_t l, r;
-			if(!GetBufferedData(1, &l))
+			if(!GetBufferedData(1, &l)) {
 				stop();
+			}
 			if(channels == 2) {
-				if(!GetBufferedData(1, &r))
+				if(!GetBufferedData(1, &r)) {
 					stop();
+				}
 			} else {
 				r = 0;
 			}
 			lastSample[AudioOutput::LEFTCHANNEL] = l;
 			lastSample[AudioOutput::RIGHTCHANNEL] = r;
 		} else if(bitsPerSample == 16) {
-			if(!GetBufferedData(2, &lastSample[AudioOutput::LEFTCHANNEL]))
+			if(!GetBufferedData(2, &lastSample[AudioOutput::LEFTCHANNEL])) {
 				stop();
+			}
 			if(channels == 2) {
-				if(!GetBufferedData(2, &lastSample[AudioOutput::RIGHTCHANNEL]))
+				if(!GetBufferedData(2, &lastSample[AudioOutput::RIGHTCHANNEL])) {
 					stop();
+				}
 			} else {
 				lastSample[AudioOutput::RIGHTCHANNEL] = 0;
 			}
 		}
-	} while(running && output->ConsumeSample(lastSample));
+	}
 
-done:
 	file->loop();
 	output->loop();
 
@@ -118,56 +100,47 @@ done:
 
 bool AudioGeneratorWAV::ReadWAVInfo()
 {
-	uint32_t u32;
-	uint16_t u16;
-	int toSkip;
-
 	// WAV specification document:
 	// https://www.aelius.com/njh/wavemetatools/doc/riffmci.pdf
 
 	// Header == "RIFF"
+	uint32_t u32;
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
-	};
+		READ_FAILED("RIFF");
+	}
 	if(u32 != 0x46464952) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, invalid RIFF header, got: %08X \n"),
-						(uint32_t)u32);
-		return false;
+		FAILED("RIFF signature bad, got: %08X", u32);
 	}
 
 	// Skip ChunkSize
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("RIFF ChunkSize");
 	};
 
 	// Format == "WAVE"
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("WAVE");
 	};
 	if(u32 != 0x45564157) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, invalid WAVE header, got: %08X \n"),
-						(uint32_t)u32);
-		return false;
+		FAILED("WAVE bad, got: %08X", u32);
 	}
 
 	// there might be JUNK or PAD - ignore it by continuing reading until we get to "fmt "
-	while(1) {
+	while(true) {
 		if(!ReadU32(&u32)) {
-			Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-			return false;
+			READ_FAILED("Chunk ID");
 		};
-		if(u32 == 0x20746d66)
+		if(u32 == 0x20746d66) {
 			break; // 'fmt '
-	};
+		}
+	}
 
 	// subchunk size
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("Subchunk size");
 	};
+
+	int toSkip;
 	if(u32 == 16) {
 		toSkip = 0;
 	} else if(u32 == 18) {
@@ -175,105 +148,87 @@ bool AudioGeneratorWAV::ReadWAVInfo()
 	} else if(u32 == 40) {
 		toSkip = 40 - 16;
 	} else {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, appears not to be standard PCM \n"));
-		return false;
+		FAILED("Subchunk size is non-standard PCM");
 	} // we only do standard PCM
 
 	// AudioFormat
+	uint16_t u16;
 	if(!ReadU16(&u16)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("AudioFormat");
 	};
 	if(u16 != 1) {
-		Serial.printf_P(
-			PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, AudioFormat appears not to be standard PCM \n"));
-		return false;
+		FAILED("AudioFormat != 1 (non-standard PCM)");
 	} // we only do standard PCM
 
 	// NumChannels
 	if(!ReadU16(&channels)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("NumChannels");
 	};
 	if((channels < 1) || (channels > 2)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, only mono and stereo are supported \n"));
-		return false;
+		FAILED("Channels bad, %u read", channels);
 	} // Mono or stereo support only
 
 	// SampleRate
 	if(!ReadU32(&sampleRate)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("SampleRate");
 	};
-	if(sampleRate < 1) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, unknown sample rate \n"));
-		return false;
+	if(sampleRate == 0) {
+		FAILED("SampleRate bad");
 	} // Weird rate, punt.  Will need to check w/DAC to see if supported
 
 	// Ignore byterate and blockalign
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("ByteRate");
 	};
 	if(!ReadU16(&u16)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
+		READ_FAILED("BlockAlign");
 		return false;
 	};
 
 	// Bits per sample
 	if(!ReadU16(&bitsPerSample)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
+		READ_FAILED("BitsPerSample");
 	};
 	if((bitsPerSample != 8) && (bitsPerSample != 16)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, only 8 or 16 bits is supported \n"));
-		return false;
+		FAILED("BitsPerSample bad, %u found", bitsPerSample);
 	} // Only 8 or 16 bits
 
 	// Skip any extra header
-	while(toSkip) {
+	while(toSkip != 0) {
 		uint8_t ign;
 		if(!ReadU8(&ign)) {
-			Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-			return false;
-		};
-		toSkip--;
+			READ_FAILED("Extra header");
+		}
+		--toSkip;
 	}
 
 	// look for data subchunk
-	do {
+	while(true) {
 		// id == "data"
 		if(!ReadU32(&u32)) {
-			Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-			return false;
-		};
-		if(u32 == 0x61746164)
+			READ_FAILED("Subchunk ID");
+		}
+		if(u32 == 0x61746164) {
 			break; // "data"
+		}
 		// Skip size, read until end of chunk
 		if(!ReadU32(&u32)) {
-			Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-			return false;
-		};
+			READ_FAILED("Subchunk size");
+		}
 		file->seek(u32, SEEK_CUR);
-	} while(1);
+	}
+
 	if(!file->isOpen()) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, file is not open \n"));
-		return false;
-	};
+		FAILED("Cannot read WAV, file not open");
+	}
 
 	// Skip size, read until end of file...
 	if(!ReadU32(&u32)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
-		return false;
-	};
+		READ_FAILED("Data size");
+	}
 	availBytes = u32;
 
 	// Now set up the buffer or fail
-	buff = reinterpret_cast<uint8_t*>(malloc(buffSize));
-	if(!buff) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, failed to set up buffer \n"));
-		return false;
-	};
 	buffPtr = 0;
 	buffLen = 0;
 
@@ -283,40 +238,32 @@ bool AudioGeneratorWAV::ReadWAVInfo()
 bool AudioGeneratorWAV::begin(AudioFileSource* source, AudioOutput* output)
 {
 	if(!source) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: failed: invalid source\n"));
-		return false;
+		FAILED("Invalid source");
 	}
 	file = source;
 	if(!output) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: invalid output\n"));
-		return false;
+		FAILED("Invalid output");
 	}
 	this->output = output;
 	if(!file->isOpen()) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: file not open\n"));
-		return false;
+		FAILED("File not open");
 	} // Error
 
 	if(!ReadWAVInfo()) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: failed during ReadWAVInfo\n"));
-		return false;
+		FAILED("ReadWAVInfo");
 	}
 
 	if(!output->SetRate(sampleRate)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: failed to SetRate in output\n"));
-		return false;
+		FAILED("output->SetRate()");
 	}
 	if(!output->SetBitsPerSample(bitsPerSample)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: failed to SetBitsPerSample in output\n"));
-		return false;
+		FAILED("output->SetBitsPerSample()");
 	}
 	if(!output->SetChannels(channels)) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: failed to SetChannels in output\n"));
-		return false;
+		FAILED("output->SetChannels()");
 	}
 	if(!output->begin()) {
-		Serial.printf_P(PSTR("AudioGeneratorWAV::begin: output's begin did not return true\n"));
-		return false;
+		FAILED("output->begin()");
 	}
 
 	running = true;

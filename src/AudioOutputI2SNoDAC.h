@@ -18,31 +18,32 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTI2SNODAC_H
-#define _AUDIOOUTPUTI2SNODAC_H
+#pragma once
 
 #include "AudioOutputI2S.h"
 
 class AudioOutputI2SNoDAC : public AudioOutputI2S
 {
 public:
-	AudioOutputI2SNoDAC(int port = 0);
-	virtual ~AudioOutputI2SNoDAC() override;
-	virtual bool ConsumeSample(int16_t sample[2]) override;
+	AudioOutputI2SNoDAC(int port = 0) : AudioOutputI2S(port, EXTERNAL_I2S)
+	{
+	}
+
+	bool ConsumeSample(int16_t sample[2]) override;
 
 	bool SetOversampling(int os);
 
 protected:
-	virtual int AdjustI2SRate(int hz) override
+	unsigned AdjustI2SRate(unsigned hz) override
 	{
 		return hz * oversample / 32;
 	}
-	uint8_t oversample;
+
 	void DeltaSigma(int16_t sample[2], uint32_t dsBuff[4]);
+
+	uint8_t oversample = 32;
 	typedef int32_t fixed24p8_t;
 	enum { fixedPosValue = 0x007fff00 }; /* 24.8 of max-signed-int */
-	fixed24p8_t lastSamp;				 // Last sample value
-	fixed24p8_t cumErr;					 // Running cumulative error since time began
+	fixed24p8_t lastSamp = 0;			 // Last sample value
+	fixed24p8_t cumErr = 0;				 // Running cumulative error since time began
 };
-
-#endif

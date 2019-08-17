@@ -19,8 +19,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCESPIRAMBUFFER_H
-#define _AUDIOFILESOURCESPIRAMBUFFER_H
+#pragma once
 
 #include "AudioFileSource.h"
 #include <SPI.h>
@@ -32,7 +31,7 @@ class AudioFileSourceSPIRAMBuffer : public AudioFileSource
 {
 public:
 	AudioFileSourceSPIRAMBuffer(AudioFileSource* in, uint8_t csPin, uint32_t bufferBytes);
-	virtual ~AudioFileSourceSPIRAMBuffer() override;
+	~AudioFileSourceSPIRAMBuffer();
 
 	virtual uint32_t read(void* data, uint32_t len) override;
 	virtual bool seek(int32_t pos, int dir) override;
@@ -55,5 +54,3 @@ private:
 	uint32_t bytesAvailable;
 	bool filled;
 };
-
-#endif

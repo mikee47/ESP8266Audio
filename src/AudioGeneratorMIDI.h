@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATORMIDI_H
-#define _AUDIOGENERATORMIDI_H
+#pragma once
 
 #include "AudioGenerator.h"
 
@@ -29,36 +28,31 @@
 class AudioGeneratorMIDI : public AudioGenerator
 {
 public:
-	AudioGeneratorMIDI()
-	{
-		freq = 44100;
-	};
-	virtual ~AudioGeneratorMIDI() override{};
 	bool SetSoundfont(AudioFileSource* newsf2)
 	{
-		if(isRunning())
+		if(isRunning()) {
 			return false;
+		}
 		sf2 = newsf2;
 		MakeStreamFromAFS(sf2, &afsSF2);
 		return true;
 	}
+
 	bool SetSampleRate(int newfreq)
 	{
-		if(isRunning())
+		if(isRunning()) {
 			return false;
+		}
 		freq = newfreq;
 		return true;
 	}
-	virtual bool begin(AudioFileSource* mid, AudioOutput* output) override;
-	virtual bool loop() override;
-	virtual bool stop() override;
-	virtual bool isRunning() override
-	{
-		return running;
-	};
+
+	bool begin(AudioFileSource* mid, AudioOutput* output) override;
+	bool loop() override;
+	bool stop() override;
 
 private:
-	int freq;
+	int freq = 44100;
 	tsf* g_tsf;
 	struct tsf_stream buffer;
 	struct tsf_stream afsMIDI;
@@ -187,5 +181,3 @@ protected:
 	int sentSamplesRendered;
 	short samplesRendered[256];
 };
-
-#endif

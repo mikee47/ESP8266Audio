@@ -24,65 +24,37 @@
 
 AudioGeneratorAAC::AudioGeneratorAAC()
 {
-	preallocateSpace = NULL;
-	preallocateSize = 0;
-
-	running = false;
-	file = NULL;
-	output = NULL;
-
-	buff = (uint8_t*)malloc(buffLen);
-	outSample = (int16_t*)malloc(1024 * 2 * sizeof(uint16_t));
+	buff = new uint8_t[buffLen];
+	outSample = new int16_t[1024 * 2];
 	if(!buff || !outSample) {
-		audioLogger->printf_P(PSTR("ERROR: Out of memory in AAC\n"));
-		Serial.flush();
+		AUDIO_ERROR("Out of memory");
 	}
 
 	hAACDecoder = AACInitDecoder();
-	if(!hAACDecoder) {
-		audioLogger->printf_P(PSTR("Out of memory error! hAACDecoder==NULL\n"));
-		Serial.flush();
+	if(hAACDecoder == nullptr) {
+		AUDIO_ERROR("Out of memory (hAACDecoder is NULL)");
 	}
-
-	buffValid = 0;
-	lastFrameEnd = 0;
-	validSamples = 0;
-	curSample = 0;
-	lastRate = 0;
-	lastChannels = 0;
 }
 
 AudioGeneratorAAC::AudioGeneratorAAC(void* preallocateData, int preallocateSz)
+	: preallocateSpace(preallocateData), preallocateSize(preallocateSz)
+
 {
-	preallocateSpace = preallocateData;
-	preallocateSize = preallocateSz;
-
-	running = false;
-	file = NULL;
-	output = NULL;
-
-	uint8_t* p = (uint8_t*)preallocateSpace;
-	buff = (uint8_t*)p;
+	buff = static_cast<uint8_t*>(preallocateSpace);
+	auto p = buff;
 	p += (buffLen + 7) & ~7;
-	outSample = (int16_t*)p;
+	outSample = reinterpret_cast<int16_t*>(p);
 	p += (1024 * 2 * sizeof(int16_t) + 7) & ~7;
 	int used = p - (uint8_t*)preallocateSpace;
 	int availSpace = preallocateSize - used;
 	if(availSpace < 0) {
-		audioLogger->printf_P(PSTR("ERROR: Out of memory in AAC\n"));
+		AUDIO_ERROR("Out of memory");
 	}
 
 	hAACDecoder = AACInitDecoderPre(p, availSpace);
-	if(!hAACDecoder) {
-		audioLogger->printf_P(PSTR("Out of memory error! hAACDecoder==NULL\n"));
-		Serial.flush();
+	if(hAACDecoder == nullptr) {
+		AUDIO_ERROR("Out of memory (hAACDecoder is NULL)");
 	}
-	buffValid = 0;
-	lastFrameEnd = 0;
-	validSamples = 0;
-	curSample = 0;
-	lastRate = 0;
-	lastChannels = 0;
 }
 
 AudioGeneratorAAC::~AudioGeneratorAAC()
@@ -99,11 +71,6 @@ bool AudioGeneratorAAC::stop()
 	running = false;
 	output->stop();
 	return file->close();
-}
-
-bool AudioGeneratorAAC::isRunning()
-{
-	return running;
 }
 
 bool AudioGeneratorAAC::FillBufferWithValidFrame()

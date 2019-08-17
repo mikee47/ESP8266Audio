@@ -18,54 +18,49 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATORWAV_H
-#define _AUDIOGENERATORWAV_H
+#pragma once
 
 #include "AudioGenerator.h"
 
 class AudioGeneratorWAV : public AudioGenerator
 {
 public:
-	AudioGeneratorWAV();
-	virtual ~AudioGeneratorWAV() override;
-	virtual bool begin(AudioFileSource* source, AudioOutput* output) override;
-	virtual bool loop() override;
-	virtual bool stop() override;
-	virtual bool isRunning() override;
-	void SetBufferSize(int sz)
-	{
-		buffSize = sz;
-	}
+	bool begin(AudioFileSource* source, AudioOutput* output) override;
+	bool loop() override;
+	bool stop() override;
+	bool isRunning() override;
 
 private:
 	bool ReadU32(uint32_t* dest)
 	{
 		return file->read(reinterpret_cast<uint8_t*>(dest), 4);
 	}
+
 	bool ReadU16(uint16_t* dest)
 	{
 		return file->read(reinterpret_cast<uint8_t*>(dest), 2);
 	}
+
 	bool ReadU8(uint8_t* dest)
 	{
 		return file->read(reinterpret_cast<uint8_t*>(dest), 1);
 	}
+
 	bool GetBufferedData(int bytes, void* dest);
+
 	bool ReadWAVInfo();
 
 protected:
 	// WAV info
-	uint16_t channels;
-	uint32_t sampleRate;
-	uint16_t bitsPerSample;
+	uint16_t channels = 0;
+	uint32_t sampleRate = 0;
+	uint16_t bitsPerSample = 0;
 
-	uint32_t availBytes;
+	uint32_t availBytes = 0;
 
 	// We need to buffer some data in-RAM to avoid doing 1000s of small reads
-	uint32_t buffSize;
-	uint8_t* buff;
-	uint16_t buffPtr;
-	uint16_t buffLen;
+	static constexpr uint32_t buffSize = 128;
+	uint8_t buff[buffSize];
+	uint16_t buffPtr = 0;
+	uint16_t buffLen = 0;
 };
-
-#endif

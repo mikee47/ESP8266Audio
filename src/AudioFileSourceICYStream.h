@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCEICYSTREAM_H
-#define _AUDIOFILESOURCEICYSTREAM_H
+#pragma once
 
 #include <Arduino.h>
 #ifdef ESP32
@@ -44,5 +43,3 @@ private:
 	int icyMetaInt;
 	int icyByteCount;
 };
-
-#endif

@@ -18,42 +18,54 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCEBUFFER_H
-#define _AUDIOFILESOURCEBUFFER_H
+#pragma once
 
 #include "AudioFileSource.h"
 
 class AudioFileSourceBuffer : public AudioFileSource
 {
 public:
-	AudioFileSourceBuffer(AudioFileSource* in, uint32_t bufferBytes);
-	AudioFileSourceBuffer(AudioFileSource* in, void* buffer, uint32_t bufferBytes); // Pre-allocated buffer by app
-	virtual ~AudioFileSourceBuffer() override;
+	AudioFileSourceBuffer(AudioFileSource* source, uint32_t bufferBytes);
 
-	virtual uint32_t read(void* data, uint32_t len) override;
-	virtual bool seek(int32_t pos, int dir) override;
-	virtual bool close() override;
-	virtual bool isOpen() override;
-	virtual uint32_t getSize() override;
-	virtual uint32_t getPos() override;
-	virtual bool loop() override;
+	// Pre-allocated buffer by app
+	AudioFileSourceBuffer(AudioFileSource* source, void* buffer, uint32_t bufferBytes)
+		: src(source), buffer(static_cast<uint8_t*>(buffer)), buffSize(bufferBytes), deallocateBuffer(false)
+	{
+	}
+
+	~AudioFileSourceBuffer()
+	{
+		freeBuffer();
+	}
+
+	uint32_t read(void* data, uint32_t len) override;
+	bool seek(int32_t pos, int dir) override;
+	bool close() override;
+	bool isOpen() override;
+	uint32_t getSize() override;
+	uint32_t getPos() override;
+	bool loop() override;
 
 	virtual uint32_t getFillLevel();
 
-	enum { STATUS_FILLING = 2, STATUS_UNDERFLOW };
+	enum {
+		STATUS_FILLING = 2,
+		STATUS_UNDERFLOW,
+	};
 
 private:
 	virtual void fill();
+	void freeBuffer();
 
 private:
+	// Assigned in constructor
 	AudioFileSource* src;
-	uint32_t buffSize;
 	uint8_t* buffer;
+	uint32_t buffSize;
 	bool deallocateBuffer;
-	uint32_t writePtr;
-	uint32_t readPtr;
-	uint32_t length;
-	bool filled;
-};
 
-#endif
+	uint32_t writePtr = 0;
+	uint32_t readPtr = 0;
+	uint32_t length = 0;
+	bool filled = false;
+};

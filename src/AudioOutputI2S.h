@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTI2S_H
-#define _AUDIOOUTPUTI2S_H
+#pragma once
 
 #include "AudioOutput.h"
 
@@ -27,29 +26,48 @@ class AudioOutputI2S : public AudioOutput
 {
 public:
 	AudioOutputI2S(int port = 0, int output_mode = EXTERNAL_I2S, int dma_buf_count = 8, int use_apll = APLL_DISABLE);
-	virtual ~AudioOutputI2S() override;
+	~AudioOutputI2S();
+
+	bool SetRate(int hz) override;
+	bool SetBitsPerSample(int bits) override;
+	bool SetChannels(int channels) override;
+	bool begin() override;
+	bool ConsumeSample(int16_t sample[2]) override;
+	bool stop() override;
+
 	bool SetPinout(int bclkPin, int wclkPin, int doutPin);
-	virtual bool SetRate(int hz) override;
-	virtual bool SetBitsPerSample(int bits) override;
-	virtual bool SetChannels(int channels) override;
-	virtual bool begin() override;
-	virtual bool ConsumeSample(int16_t sample[2]) override;
-	virtual bool stop() override;
 
-	bool SetOutputModeMono(bool mono); // Force mono output no matter the input
+	// Force mono output no matter the input
+	bool SetOutputModeMono(bool mono)
+	{
+		this->mono = mono;
+		return true;
+	}
 
-	enum : int { APLL_AUTO = -1, APLL_ENABLE = 1, APLL_DISABLE = 0 };
-	enum : int { EXTERNAL_I2S = 0, INTERNAL_DAC = 1, INTERNAL_PDM = 2 };
+	enum : int {
+		APLL_AUTO = -1,
+		APLL_ENABLE = 1,
+		APLL_DISABLE = 0,
+	};
+
+	enum : int { EXTERNAL_I2S = 0, INTERNAL_DAC, INTERNAL_PDM, OUTPUT_MODE_MAX };
 
 protected:
-	virtual int AdjustI2SRate(int hz)
+	virtual unsigned AdjustI2SRate(unsigned hz)
 	{
 		return hz;
 	}
-	uint8_t portNo;
-	int output_mode;
-	bool mono;
-	bool i2sOn;
-};
 
-#endif
+private:
+	bool install();
+
+	// Initialised in constructor
+	uint8_t portNo;
+	uint8_t output_mode;
+	uint8_t dma_buf_count;
+	int8_t use_apll;
+
+	//
+	bool mono = false;
+	bool i2sOn = false;
+};

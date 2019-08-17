@@ -18,16 +18,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCEHTTPSTREAM_H
-#define _AUDIOFILESOURCEHTTPSTREAM_H
+#pragma once
 
-#include <Arduino.h>
+#include "AudioFileSource.h"
+
 #ifdef ESP32
 #include <HTTPClient.h>
 #else
 #include <ESP8266HTTPClient.h>
 #endif
-#include "AudioFileSource.h"
 
 class AudioFileSourceHTTPStream : public AudioFileSource
 {
@@ -65,5 +64,3 @@ private:
 	int reconnectDelayMs;
 	char saveURL[128];
 };
-
-#endif

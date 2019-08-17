@@ -1,6 +1,6 @@
 /*
-  AudioOutputSerialWAV
-  Writes a mostly correct WAV file to the serial port
+  AudioFileSourceID3Unsync
+  Internal class to handle ID3 unsync operation
   
   Copyright (C) 2017  Earle F. Philhower, III
 
@@ -18,15 +18,29 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "AudioOutputSerialWAV.h"
-#include <Arduino.h>
+#pragma once
 
-bool AudioOutputSerialWAV::begin()
-{
-	return writeHeader();
-}
+#include "AudioFileSource.h"
 
-bool write(const void* src, size_t size)
+class AudioFileSourceID3Unsync : public AudioFileSource
 {
-	return Serial.write(static_cast<const uint8_t*>(src), size) == size;
-}
+public:
+	AudioFileSourceID3Unsync(AudioFileSource* src, int len, bool unsync) : src(src), remaining(len), unsync(unsync)
+	{
+	}
+
+	uint32_t read(void* data, uint32_t len) override;
+
+	int getByte();
+
+	bool eof()
+	{
+		return remaining <= 0;
+	}
+
+private:
+	AudioFileSource* src = nullptr;
+	int remaining = 0;
+	bool unsync = false;
+	int savedByte = -1;
+};

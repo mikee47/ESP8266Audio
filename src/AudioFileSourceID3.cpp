@@ -19,140 +19,30 @@
 */
 
 #include "AudioFileSourceID3.h"
-
-// Handle unsync operation in ID3 with custom class
-class AudioFileSourceUnsync : public AudioFileSource
-{
-public:
-	AudioFileSourceUnsync(AudioFileSource* src, int len, bool unsync);
-	virtual ~AudioFileSourceUnsync() override;
-	virtual uint32_t read(void* data, uint32_t len) override;
-
-	int getByte();
-	bool eof();
-
-private:
-	AudioFileSource* src;
-	int remaining;
-	bool unsync;
-	int savedByte;
-};
-
-AudioFileSourceUnsync::AudioFileSourceUnsync(AudioFileSource* src, int len, bool unsync)
-{
-	this->src = src;
-	this->remaining = len;
-	this->unsync = unsync;
-	this->savedByte = -1;
-}
-
-AudioFileSourceUnsync::~AudioFileSourceUnsync()
-{
-}
-
-uint32_t AudioFileSourceUnsync::read(void* data, uint32_t len)
-{
-	uint32_t bytes = 0;
-	uint8_t* ptr = reinterpret_cast<uint8_t*>(data);
-
-	// This is only used during ID3 parsing, so no need to optimize here...
-	while(len--) {
-		int b = getByte();
-		if(b >= 0) {
-			*(ptr++) = (uint8_t)b;
-			bytes++;
-		}
-	}
-	return bytes;
-}
-
-int AudioFileSourceUnsync::getByte()
-{
-	// If we're not unsync, just read.
-	if(!unsync) {
-		uint8_t c;
-		if(!remaining)
-			return -1;
-		remaining--;
-		if(1 != src->read(&c, 1))
-			return -1;
-		return c;
-	}
-
-	// If we've saved a pre-read character, return it immediately
-	if(savedByte >= 0) {
-		int s = savedByte;
-		savedByte = -1;
-		return s;
-	}
-
-	if(remaining <= 0) {
-		return -1;
-	} else if(remaining == 1) {
-		remaining--;
-		uint8_t c;
-		if(1 != src->read(&c, 1))
-			return -1;
-		else
-			return c;
-	} else {
-		uint8_t c;
-		remaining--;
-		if(1 != src->read(&c, 1))
-			return -1;
-		if(c != 0xff) {
-			return c;
-		}
-		// Saw 0xff, check next byte.  If 0 then eat it, OTW return the 0xff
-		uint8_t d;
-		remaining--;
-		if(1 != src->read(&d, 1))
-			return c;
-		if(d != 0x00) {
-			savedByte = d;
-		}
-		return c;
-	}
-}
-
-bool AudioFileSourceUnsync::eof()
-{
-	if(remaining <= 0)
-		return true;
-	else
-		return false;
-}
-
-AudioFileSourceID3::AudioFileSourceID3(AudioFileSource* src)
-{
-	this->src = src;
-	this->checked = false;
-}
-
-AudioFileSourceID3::~AudioFileSourceID3()
-{
-}
+#include "AudioFileSourceID3Unsync.h"
 
 uint32_t AudioFileSourceID3::read(void* data, uint32_t len)
 {
 	int rev = 0;
 
 	if(checked) {
-		return src->read(data, len);
+		return src.read(data, len);
 	}
 	checked = true;
 	// <10 bytes initial read, not enough space to check header
-	if(len < 10)
-		return src->read(data, len);
+	if(len < 10) {
+		return src.read(data, len);
+	}
 
 	uint8_t* buff = reinterpret_cast<uint8_t*>(data);
-	int ret = src->read(data, 10);
-	if(ret < 10)
+	int ret = src.read(data, 10);
+	if(ret < 10) {
 		return ret;
+	}
 
 	if((buff[0] != 'I') || (buff[1] != 'D') || (buff[2] != '3') || (buff[3] > 0x04) || (buff[3] < 0x02) ||
 	   (buff[4] != 0)) {
-		return 10 + src->read(buff + 10, len - 10);
+		return 10 + src.read(buff + 10, len - 10);
 	}
 
 	rev = buff[3];
@@ -179,12 +69,13 @@ uint32_t AudioFileSourceID3::read(void* data, uint32_t len)
 	id3Size = id3Size << 7;
 	id3Size |= buff[9];
 	// Every read from now may be unsync'd
-	AudioFileSourceUnsync id3(src, id3Size, unsync);
+	AudioFileSourceID3Unsync id3(&src, id3Size, unsync);
 
 	if(exthdr) {
 		int ehsz = (id3.getByte() << 24) | (id3.getByte() << 16) | (id3.getByte() << 8) | (id3.getByte());
-		for(int j = 0; j < ehsz - 4; j++)
+		for(int j = 0; j < ehsz - 4; j++) {
 			id3.getByte(); // Throw it away
+		}
 	}
 
 	do {
@@ -195,10 +86,11 @@ uint32_t AudioFileSourceID3::read(void* data, uint32_t len)
 		frameid[0] = id3.getByte();
 		frameid[1] = id3.getByte();
 		frameid[2] = id3.getByte();
-		if(rev == 2)
+		if(rev == 2) {
 			frameid[3] = 0;
-		else
+		} else {
 			frameid[3] = id3.getByte();
+		}
 
 		if(frameid[0] == 0 && frameid[1] == 0 && frameid[2] == 0 && frameid[3] == 0) {
 			// We're in padding
@@ -227,10 +119,11 @@ uint32_t AudioFileSourceID3::read(void* data, uint32_t len)
 			uint16_t i;
 			bool isUnicode = (id3.getByte() == 1) ? true : false;
 			for(i = 0; i < framesize - 1; i++) {
-				if(i < sizeof(value) - 1)
+				if(i < sizeof(value) - 1) {
 					value[i] = id3.getByte();
-				else
+				} else {
 					(void)id3.getByte();
+				}
 			}
 			value[i < sizeof(value) - 1 ? i : sizeof(value) - 1] = 0; // Terminate the string...
 			if((frameid[0] == 'T' && frameid[1] == 'A' && frameid[2] == 'L' && frameid[3] == 'B') ||
@@ -250,30 +143,30 @@ uint32_t AudioFileSourceID3::read(void* data, uint32_t len)
 	} while(!id3.eof());
 
 	// All ID3 processing done, return to main caller
-	return src->read(data, len);
+	return src.read(data, len);
 }
 
 bool AudioFileSourceID3::seek(int32_t pos, int dir)
 {
-	return src->seek(pos, dir);
+	return src.seek(pos, dir);
 }
 
 bool AudioFileSourceID3::close()
 {
-	return src->close();
+	return src.close();
 }
 
 bool AudioFileSourceID3::isOpen()
 {
-	return src->isOpen();
+	return src.isOpen();
 }
 
 uint32_t AudioFileSourceID3::getSize()
 {
-	return src->getSize();
+	return src.getSize();
 }
 
 uint32_t AudioFileSourceID3::getPos()
 {
-	return src->getPos();
+	return src.getPos();
 }

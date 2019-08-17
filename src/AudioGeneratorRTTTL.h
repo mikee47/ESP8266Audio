@@ -21,8 +21,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATORRTTTL_H
-#define _AUDIOGENERATORRTTTL_H
+#pragma once
 
 #include "AudioGenerator.h"
 
@@ -64,5 +63,3 @@ protected:
 	int ttlSamples;
 	int samplesSent;
 };
-
-#endif

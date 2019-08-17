@@ -24,23 +24,10 @@
 
 AudioGeneratorMP3a::AudioGeneratorMP3a()
 {
-	running = false;
-	file = NULL;
-	output = NULL;
 	hMP3Decoder = MP3InitDecoder();
-	if(!hMP3Decoder) {
-		audioLogger->printf_P(PSTR("Out of memory error! hMP3Decoder==NULL\n"));
-		Serial.flush();
+	if(hMP3Decoder == nullptr) {
+		AUDIO_ERROR("Out of memory: hMP3Decoder==NULL");
 	}
-	// For sanity's sake...
-	memset(buff, 0, sizeof(buff));
-	memset(outSample, 0, sizeof(outSample));
-	buffValid = 0;
-	lastFrameEnd = 0;
-	validSamples = 0;
-	curSample = 0;
-	lastRate = 0;
-	lastChannels = 0;
 }
 
 AudioGeneratorMP3a::~AudioGeneratorMP3a()
@@ -50,16 +37,12 @@ AudioGeneratorMP3a::~AudioGeneratorMP3a()
 
 bool AudioGeneratorMP3a::stop()
 {
-	if(!running)
+	if(!running) {
 		return true;
+	}
 	running = false;
 	output->stop();
 	return file->close();
-}
-
-bool AudioGeneratorMP3a::isRunning()
-{
-	return running;
 }
 
 bool AudioGeneratorMP3a::FillBufferWithValidFrame()
@@ -119,7 +102,7 @@ bool AudioGeneratorMP3a::loop()
 		if(ret) {
 			// Error, skip the frame...
 			char buff[48];
-			sprintf(buff, "MP3 decode error %d", ret);
+			snprintf(buff, sizeof(buff), _F("MP3 decode error %d"), ret);
 			cb.st(ret, buff);
 		} else {
 			lastFrameEnd = buffValid - bytesLeft;

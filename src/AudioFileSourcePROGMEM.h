@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCEPROGMEM_H
-#define _AUDIOFILESOURCEPROGMEM_H
+#pragma once
 
 #include "AudioFileSource.h"
 
@@ -50,5 +49,3 @@ private:
 	uint32_t progmemLen;
 	uint32_t filePointer;
 };
-
-#endif

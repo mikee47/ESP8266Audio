@@ -21,57 +21,64 @@
 #include <Arduino.h>
 #include "AudioOutputMixer.h"
 
-AudioOutputMixerStub::AudioOutputMixerStub(AudioOutputMixer* sink, int id) : AudioOutput()
+// The output stub exported by the mixer for use by the generator
+class AudioOutputMixerStub : public AudioOutput
 {
-	this->id = id;
-	this->parent = sink;
-	SetGain(1.0);
-}
+public:
+	AudioOutputMixerStub(AudioOutputMixer* sink, int id) : parent(sink), id(id)
+	{
+		SetGain(1.0);
+	}
 
-AudioOutputMixerStub::~AudioOutputMixerStub()
-{
-	parent->RemoveInput(id);
-}
+	~AudioOutputMixerStub()
+	{
+		parent->RemoveInput(id);
+	}
 
-bool AudioOutputMixerStub::SetRate(int hz)
-{
-	return parent->SetRate(hz, id);
-}
+	bool SetRate(int hz) override
+	{
+		return parent->SetRate(hz, id);
+	}
 
-bool AudioOutputMixerStub::SetBitsPerSample(int bits)
-{
-	return parent->SetBitsPerSample(bits, id);
-}
+	bool SetBitsPerSample(int bits) override
+	{
+		return parent->SetBitsPerSample(bits, id);
+	}
 
-bool AudioOutputMixerStub::SetChannels(int channels)
-{
-	return parent->SetChannels(channels, id);
-}
+	bool SetChannels(int channels) override
+	{
+		return parent->SetChannels(channels, id);
+	}
 
-bool AudioOutputMixerStub::begin()
-{
-	return parent->begin(id);
-}
+	bool begin() override
+	{
+		return parent->begin(id);
+	}
 
-bool AudioOutputMixerStub::ConsumeSample(int16_t sample[2])
-{
-	int16_t amp[2];
-	amp[LEFTCHANNEL] = Amplify(sample[LEFTCHANNEL]);
-	amp[RIGHTCHANNEL] = Amplify(sample[RIGHTCHANNEL]);
-	return parent->ConsumeSample(amp, id);
-}
+	bool ConsumeSample(int16_t sample[2]) override
+	{
+		int16_t amp[2];
+		amp[LEFTCHANNEL] = Amplify(sample[LEFTCHANNEL]);
+		amp[RIGHTCHANNEL] = Amplify(sample[RIGHTCHANNEL]);
+		return parent->ConsumeSample(amp, id);
+	}
 
-bool AudioOutputMixerStub::stop()
-{
-	return parent->stop(id);
-}
+	bool stop() override
+	{
+		return parent->stop(id);
+	}
+
+protected:
+	AudioOutputMixer* parent;
+	int id;
+};
 
 AudioOutputMixer::AudioOutputMixer(int buffSizeSamples, AudioOutput* dest) : AudioOutput()
 {
 	buffSize = buffSizeSamples;
-	leftAccum = (int32_t*)calloc(sizeof(int32_t), buffSize);
-	rightAccum = (int32_t*)calloc(sizeof(int32_t), buffSize);
-	for(int i = 0; i < maxStubs; i++) {
+	leftAccum = new int32_t[buffSize];
+	rightAccum = new int32_t[buffSize];
+	for(unsigned i = 0; i < maxStubs; i++) {
 		stubAllocated[i] = false;
 		stubRunning[i] = false;
 		writePtr[i] = 0;
@@ -83,43 +90,8 @@ AudioOutputMixer::AudioOutputMixer(int buffSizeSamples, AudioOutput* dest) : Aud
 
 AudioOutputMixer::~AudioOutputMixer()
 {
-	free(leftAccum);
-	free(rightAccum);
-}
-
-// Most "standard" interfaces should fail, only MixerStub should be able to talk to us
-bool AudioOutputMixer::SetRate(int hz)
-{
-	(void)hz;
-	return false;
-}
-
-bool AudioOutputMixer::SetBitsPerSample(int bits)
-{
-	(void)bits;
-	return false;
-}
-
-bool AudioOutputMixer::SetChannels(int channels)
-{
-	(void)channels;
-	return false;
-}
-
-bool AudioOutputMixer::ConsumeSample(int16_t sample[2])
-{
-	(void)sample;
-	return false;
-}
-
-bool AudioOutputMixer::begin()
-{
-	return false;
-}
-
-bool AudioOutputMixer::stop()
-{
-	return false;
+	delete[] leftAccum;
+	delete[] rightAccum;
 }
 
 // TODO - actually ensure all samples are same speed, size, channels, rate
@@ -153,17 +125,18 @@ bool AudioOutputMixer::begin(int id)
 	}
 }
 
-AudioOutputMixerStub* AudioOutputMixer::NewInput()
+AudioOutput* AudioOutputMixer::NewInput()
 {
-	for(int i = 0; i < maxStubs; i++) {
+	for(unsigned i = 0; i < maxStubs; i++) {
 		if(!stubAllocated[i]) {
 			stubAllocated[i] = true;
 			stubRunning[i] = false;
 			writePtr[i] = readPtr; // TODO - should it be 1 before readPtr?
-			AudioOutputMixerStub* stub = new AudioOutputMixerStub(this, i);
+			auto stub = new AudioOutputMixerStub(this, i);
 			return stub;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -180,7 +153,7 @@ bool AudioOutputMixer::loop()
 	bool avail;
 	do {
 		avail = true;
-		for(int i = 0; i < maxStubs && avail; i++) {
+		for(unsigned i = 0; i < maxStubs && avail; i++) {
 			if(stubRunning[i] && writePtr[i] == readPtr) {
 				avail = false; // The read pointer is touching an active writer, can't advance
 			}

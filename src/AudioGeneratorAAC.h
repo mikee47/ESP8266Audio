@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATORAAC_H
-#define _AUDIOGENERATORAAC_H
+#pragma once
 
 #include "AudioGenerator.h"
 #include "libhelix-aac/aacdec.h"
@@ -29,34 +28,32 @@ class AudioGeneratorAAC : public AudioGenerator
 public:
 	AudioGeneratorAAC();
 	AudioGeneratorAAC(void* preallocateData, int preallocateSize);
-	virtual ~AudioGeneratorAAC() override;
-	virtual bool begin(AudioFileSource* source, AudioOutput* output) override;
-	virtual bool loop() override;
-	virtual bool stop() override;
-	virtual bool isRunning() override;
+	~AudioGeneratorAAC();
+
+	bool begin(AudioFileSource* source, AudioOutput* output) override;
+	bool loop() override;
+	bool stop() override;
 
 protected:
-	void* preallocateSpace;
-	int preallocateSize;
+	void* preallocateSpace = nullptr;
+	int preallocateSize = 0;
 
 	// Helix AAC decoder
-	HAACDecoder hAACDecoder;
+	HAACDecoder hAACDecoder = nullptr;
 
 	// Input buffering
-	const int buffLen = 1600;
-	uint8_t* buff; //[1600]; // File buffer required to store at least a whole compressed frame
-	int16_t buffValid;
-	int16_t lastFrameEnd;
+	static constexpr int buffLen = 1600;
+	uint8_t* buff; // File buffer required to store at least a whole compressed frame
+	int16_t buffValid = 0;
+	int16_t lastFrameEnd = 0;
 	bool FillBufferWithValidFrame(); // Read until we get a valid syncword and min(feof, 2048) butes in the buffer
 
 	// Output buffering
 	int16_t* outSample; //[1024 * 2]; // Interleaved L/R
-	int16_t validSamples;
-	int16_t curSample;
+	int16_t validSamples = 0;
+	int16_t curSample = 0;
 
 	// Each frame may change this if they're very strange, I guess
-	unsigned int lastRate;
-	int lastChannels;
+	unsigned int lastRate = 0;
+	int lastChannels = 0;
 };
-
-#endif

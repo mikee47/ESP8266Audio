@@ -26,10 +26,11 @@
 class AudioOutputSPIFFSWAV : public AudioOutputWAV
 {
 public:
-	bool open(const String& filename) override;
+	bool begin() override;
+	bool stop() override;
+
+protected:
 	bool write(const void* src, size_t size) override;
-	bool rewind() override;
-	void close() override;
 
 private:
 	file_t file = -1;

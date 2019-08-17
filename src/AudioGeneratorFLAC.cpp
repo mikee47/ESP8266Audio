@@ -20,45 +20,66 @@
 
 #include <AudioGeneratorFLAC.h>
 
-AudioGeneratorFLAC::AudioGeneratorFLAC()
-{
-	flac = NULL;
-	channels = 0;
-	sampleRate = 0;
-	bitsPerSample = 0;
-	buff[0] = NULL;
-	buff[1] = NULL;
-	buffPtr = 0;
-	buffLen = 0;
-}
-
 AudioGeneratorFLAC::~AudioGeneratorFLAC()
 {
-	if(flac)
-		FLAC__stream_decoder_delete(flac);
-	flac = NULL;
+	FLAC__stream_decoder_delete(flac);
 }
 
 bool AudioGeneratorFLAC::begin(AudioFileSource* source, AudioOutput* output)
 {
-	if(!source)
+	if(!source) {
 		return false;
+	}
 	file = source;
-	if(!output)
+	if(!output) {
 		return false;
+	}
 	this->output = output;
-	if(!file->isOpen())
+	if(!file->isOpen()) {
 		return false; // Error
+	}
 
 	flac = FLAC__stream_decoder_new();
-	if(!flac)
+	if(!flac) {
 		return false;
+	}
 
 	(void)FLAC__stream_decoder_set_md5_checking(flac, false);
 
-	FLAC__StreamDecoderInitStatus ret =
-		FLAC__stream_decoder_init_stream(flac, _read_cb, _seek_cb, _tell_cb, _length_cb, _eof_cb, _write_cb,
-										 _metadata_cb, _error_cb, reinterpret_cast<void*>(this));
+#define SELF() static_cast<AudioGeneratorFLAC*>(client_data)
+
+	// FLAC callbacks, need static functions to bounce into c++ from c
+	auto _read_cb = [](const FLAC__StreamDecoder* decoder, FLAC__byte buffer[], size_t* bytes,
+					   void* client_data) -> FLAC__StreamDecoderReadStatus {
+		return SELF()->read_cb(decoder, buffer, bytes);
+	};
+	auto _seek_cb = [](const FLAC__StreamDecoder* decoder, FLAC__uint64 absolute_byte_offset,
+					   void* client_data) -> FLAC__StreamDecoderSeekStatus {
+		return SELF()->seek_cb(decoder, absolute_byte_offset);
+	};
+	auto _tell_cb = [](const FLAC__StreamDecoder* decoder, FLAC__uint64* absolute_byte_offset,
+					   void* client_data) -> FLAC__StreamDecoderTellStatus {
+		return SELF()->tell_cb(decoder, absolute_byte_offset);
+	};
+	auto _length_cb = [](const FLAC__StreamDecoder* decoder, FLAC__uint64* stream_length,
+						 void* client_data) -> FLAC__StreamDecoderLengthStatus {
+		return SELF()->length_cb(decoder, stream_length);
+	};
+	auto _eof_cb = [](const FLAC__StreamDecoder* decoder, void* client_data) -> FLAC__bool {
+		return SELF()->eof_cb(decoder);
+	};
+	auto _write_cb = [](const FLAC__StreamDecoder* decoder, const FLAC__Frame* frame, const FLAC__int32* const buffer[],
+						void* client_data) -> FLAC__StreamDecoderWriteStatus {
+		return SELF()->write_cb(decoder, frame, buffer);
+	};
+	auto _metadata_cb = [](const FLAC__StreamDecoder* decoder, const FLAC__StreamMetadata* metadata,
+						   void* client_data) { SELF()->metadata_cb(decoder, metadata); };
+	auto _error_cb = [](const FLAC__StreamDecoder* decoder, FLAC__StreamDecoderErrorStatus status, void* client_data) {
+		SELF()->error_cb(decoder, status);
+	};
+
+	FLAC__StreamDecoderInitStatus ret = FLAC__stream_decoder_init_stream(
+		flac, _read_cb, _seek_cb, _tell_cb, _length_cb, _eof_cb, _write_cb, _metadata_cb, _error_cb, this);
 	if(ret != FLAC__STREAM_DECODER_INIT_STATUS_OK) {
 		FLAC__stream_decoder_delete(flac);
 		flac = NULL;
@@ -80,7 +101,7 @@ bool AudioGeneratorFLAC::loop()
 	if(!output->ConsumeSample(lastSample))
 		goto done; // Try and send last buffered sample
 
-	do {
+	while(running && output->ConsumeSample(lastSample)) {
 		if(buffPtr == buffLen) {
 			ret = FLAC__stream_decoder_process_single(flac);
 			if(!ret) {
@@ -92,15 +113,24 @@ bool AudioGeneratorFLAC::loop()
 					running = false;
 					goto done;
 				}
+
 				unsigned newsr = FLAC__stream_decoder_get_sample_rate(flac);
+				if(newsr != sampleRate) {
+					sampleRate = newsr;
+					output->SetRate(sampleRate);
+				}
+
 				unsigned newch = FLAC__stream_decoder_get_channels(flac);
+				if(newch != channels) {
+					channels = newch;
+					output->SetChannels(channels);
+				}
+
 				unsigned newbps = FLAC__stream_decoder_get_bits_per_sample(flac);
-				if(newsr != sampleRate)
-					output->SetRate(sampleRate = newsr);
-				if(newch != channels)
-					output->SetChannels(channels = newch);
-				if(newbps != bitsPerSample)
-					output->SetBitsPerSample(bitsPerSample = newbps);
+				if(newbps != bitsPerSample) {
+					bitsPerSample = newbps;
+					output->SetBitsPerSample(bitsPerSample);
+				}
 			}
 		}
 
@@ -128,7 +158,7 @@ bool AudioGeneratorFLAC::loop()
 				lastSample[AudioOutput::RIGHTCHANNEL] = lastSample[AudioOutput::LEFTCHANNEL];
 		}
 		buffPtr++;
-	} while(running && output->ConsumeSample(lastSample));
+	}
 
 done:
 	file->loop();
@@ -139,17 +169,11 @@ done:
 
 bool AudioGeneratorFLAC::stop()
 {
-	if(flac)
-		FLAC__stream_decoder_delete(flac);
+	FLAC__stream_decoder_delete(flac);
 	flac = NULL;
 	running = false;
 	output->stop();
 	return true;
-}
-
-bool AudioGeneratorFLAC::isRunning()
-{
-	return running;
 }
 
 FLAC__StreamDecoderReadStatus AudioGeneratorFLAC::read_cb(const FLAC__StreamDecoder* decoder, FLAC__byte buffer[],
@@ -212,7 +236,7 @@ void AudioGeneratorFLAC::metadata_cb(const FLAC__StreamDecoder* decoder, const F
 {
 	(void)decoder;
 	(void)metadata;
-	audioLogger->printf_P(PSTR("Metadata\n"));
+	AUDIO_INFO("Metadata");
 }
 void AudioGeneratorFLAC::error_cb(const FLAC__StreamDecoder* decoder, FLAC__StreamDecoderErrorStatus status)
 {

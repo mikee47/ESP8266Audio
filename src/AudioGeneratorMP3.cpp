@@ -19,39 +19,21 @@
 */
 
 #include "AudioGeneratorMP3.h"
+#include <Arduino.h>
 
-AudioGeneratorMP3::AudioGeneratorMP3()
-{
-	running = false;
-	file = NULL;
-	output = NULL;
-	buff = NULL;
-	nsCountMax = 1152 / 32;
-	madInitted = false;
-	preallocateSpace = NULL;
-	preallocateSize = 0;
-}
-
-AudioGeneratorMP3::AudioGeneratorMP3(void* space, int size)
-{
-	running = false;
-	file = NULL;
-	output = NULL;
-	buff = NULL;
-	nsCountMax = 1152 / 32;
-	madInitted = false;
-	preallocateSpace = space;
-	preallocateSize = size;
-}
-
-AudioGeneratorMP3::~AudioGeneratorMP3()
+void AudioGeneratorMP3::freeBuffers()
 {
 	if(!preallocateSpace) {
-		free(buff);
-		free(synth);
-		free(frame);
-		free(stream);
+		delete[] buff;
+		delete synth;
+		delete frame;
+		delete stream;
 	}
+
+	buff = nullptr;
+	synth = nullptr;
+	frame = nullptr;
+	stream = nullptr;
 }
 
 bool AudioGeneratorMP3::stop()
@@ -63,26 +45,11 @@ bool AudioGeneratorMP3::stop()
 		madInitted = false;
 	}
 
-	if(!preallocateSpace) {
-		free(buff);
-		free(synth);
-		free(frame);
-		free(stream);
-	}
-
-	buff = NULL;
-	synth = NULL;
-	frame = NULL;
-	stream = NULL;
+	freeBuffers();
 
 	running = false;
 	output->stop();
 	return file->close();
-}
-
-bool AudioGeneratorMP3::isRunning()
-{
-	return running;
 }
 
 enum mad_flow AudioGeneratorMP3::ErrorToFlow()
@@ -109,7 +76,7 @@ enum mad_flow AudioGeneratorMP3::Input()
 	if(stream->next_frame) {
 		unused = buffLen - (stream->next_frame - buff);
 		memmove(buff, stream->next_frame, unused);
-		stream->next_frame = NULL;
+		stream->next_frame = nullptr;
 	}
 	if(unused == buffLen) {
 		// Something wicked this way came, throw it all out and try again
@@ -120,7 +87,7 @@ enum mad_flow AudioGeneratorMP3::Input()
 	int len = buffLen - unused;
 	len = file->read(buff + unused, len);
 	if(len == 0) {
-		audioLogger->printf_P(PSTR("MP3 stop, len==0\n"));
+		AUDIO_INFO("Stop, len==0");
 		return MAD_FLOW_STOP;
 	}
 
@@ -161,7 +128,7 @@ bool AudioGeneratorMP3::GetOneSample(int16_t sample[2])
 		switch(mad_synth_frame_onens(synth, frame, nsCount++)) {
 		case MAD_FLOW_STOP:
 		case MAD_FLOW_BREAK:
-			audioLogger->printf_P(PSTR("msf1ns failed\n"));
+			AUDIO_ERROR("msf1ns failed");
 			return false; // Either way we're done
 		default:
 			break; // Do nothing
@@ -174,17 +141,15 @@ bool AudioGeneratorMP3::GetOneSample(int16_t sample[2])
 	return true;
 }
 
+#include <PolledTimers.h>
+
 bool AudioGeneratorMP3::loop()
 {
-	if(!running)
-		goto done; // Nothing to do here!
+	ElapseTimer timer(10000);
 
 	// First, try and push in the stored sample.  If we can't, then punt and try later
-	if(!output->ConsumeSample(lastSample))
-		goto done; // Can't send, but no error detected
-
-	// Try and stuff the buffer one sample at a time
-	do {
+	while(running && output->ConsumeSample(lastSample) && !timer.isExpired()) {
+		// Try and stuff the buffer one sample at a time
 		// Decode next frame if we're beyond the existing generated data
 		if((samplePtr >= synth->pcm.length) && (nsCount >= nsCountMax)) {
 		retry:
@@ -200,13 +165,12 @@ bool AudioGeneratorMP3::loop()
 		}
 
 		if(!GetOneSample(lastSample)) {
-			audioLogger->printf_P(PSTR("G1S failed\n"));
+			AUDIO_ERROR("G1S failed");
 			running = false;
-			goto done;
+			break;
 		}
-	} while(running && output->ConsumeSample(lastSample));
+	}
 
-done:
 	file->loop();
 	output->loop();
 
@@ -215,22 +179,22 @@ done:
 
 bool AudioGeneratorMP3::begin(AudioFileSource* source, AudioOutput* output)
 {
-	if(!source)
+	if(source == nullptr || output == nullptr) {
 		return false;
+	}
 	file = source;
-	if(!output)
-		return false;
 	this->output = output;
 	if(!file->isOpen()) {
-		audioLogger->printf_P(PSTR("MP3 source file not open\n"));
+		AUDIO_ERROR("MP3 source file not open");
 		return false; // Error
 	}
 
 	output->SetBitsPerSample(16); // Constant for MP3 decoder
 	output->SetChannels(2);
 
-	if(!output->begin())
+	if(!output->begin()) {
 		return false;
+	}
 
 	// Where we are in generating one frame's data, set to invalid so we will run loop on first getsample()
 	samplePtr = 9999;
@@ -241,8 +205,8 @@ bool AudioGeneratorMP3::begin(AudioFileSource* source, AudioOutput* output)
 
 	// Allocate all large memory chunks
 	if(preallocateSpace) {
-		uint8_t* p = reinterpret_cast<uint8_t*>(preallocateSpace);
-		buff = reinterpret_cast<unsigned char*>(p);
+		uint8_t* p = static_cast<uint8_t*>(preallocateSpace);
+		buff = p;
 		p += (buffLen + 7) & ~7;
 		stream = reinterpret_cast<struct mad_stream*>(p);
 		p += (sizeof(struct mad_stream) + 7) & ~7;
@@ -252,24 +216,16 @@ bool AudioGeneratorMP3::begin(AudioFileSource* source, AudioOutput* output)
 		p += (sizeof(struct mad_synth) + 7) & ~7;
 		int neededBytes = p - reinterpret_cast<uint8_t*>(preallocateSpace);
 		if(neededBytes > preallocateSize) {
-			audioLogger->printf_P("OOM error in MP3:  Want %d bytes, have %d bytes preallocated.\n", neededBytes,
-								  preallocateSize);
+			AUDIO_ERROR("OOM: Want %u bytes, have %u bytes preallocated", neededBytes, preallocateSize);
 			return false;
 		}
 	} else {
-		buff = reinterpret_cast<unsigned char*>(malloc(buffLen));
-		stream = reinterpret_cast<struct mad_stream*>(malloc(sizeof(struct mad_stream)));
-		frame = reinterpret_cast<struct mad_frame*>(malloc(sizeof(struct mad_frame)));
-		synth = reinterpret_cast<struct mad_synth*>(malloc(sizeof(struct mad_synth)));
+		buff = new uint8_t[buffLen];
+		stream = new mad_stream;
+		frame = new mad_frame;
+		synth = new mad_synth;
 		if(!buff || !stream || !frame || !synth) {
-			free(buff);
-			free(stream);
-			free(frame);
-			free(synth);
-			buff = NULL;
-			stream = NULL;
-			frame = NULL;
-			synth = NULL;
+			freeBuffers();
 			return false;
 		}
 	}

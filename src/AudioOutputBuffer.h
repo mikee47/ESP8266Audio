@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTBUFFER_H
-#define _AUDIOOUTPUTBUFFER_H
+#pragma once
 
 #include "AudioOutput.h"
 
@@ -44,5 +43,3 @@ protected:
 	int readPtr;
 	bool filled;
 };
-
-#endif

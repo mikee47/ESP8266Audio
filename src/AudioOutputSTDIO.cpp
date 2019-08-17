@@ -22,30 +22,32 @@
 #include "AudioOutputSTDIO.h"
 #include <unistd.h>
 
-bool AudioOutputSTDIO::open(const String& filename)
+bool AudioOutputSTDIO::begin()
 {
 	if(f != nullptr) {
 		return false; // Already open
 	}
 	unlink(filename.c_str());
 	f = fopen(filename.c_str(), "wb+");
-	return f != nullptr;
+	if (f == nullptr) {
+		return false;
+	}
+	return writeHeader();
 }
 
-void AudioOutputSTDIO::close()
+bool AudioOutputSTDIO::stop()
 {
 	if(f != nullptr) {
+		if(fseek(f, 0, SEEK_SET) == 0) {
+			writeHeader();
+		}
 		fclose(f);
 		f = nullptr;
 	}
+	return true;
 }
 
 bool AudioOutputSTDIO::write(const void* src, size_t size)
 {
 	return fwrite(src, size, 1, f) == 1;
-}
-
-bool AudioOutputSTDIO::rewind()
-{
-	return fseek(f, 0, SEEK_SET) == 0;
 }

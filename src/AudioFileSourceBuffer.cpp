@@ -24,36 +24,19 @@
 #pragma GCC optimize("O3")
 
 AudioFileSourceBuffer::AudioFileSourceBuffer(AudioFileSource* source, uint32_t buffSizeBytes)
+	: src(source), buffer(new uint8_t[buffSize]), buffSize(buffSizeBytes), deallocateBuffer(true)
 {
-	buffSize = buffSizeBytes;
-	buffer = (uint8_t*)malloc(sizeof(uint8_t) * buffSize);
-	if(!buffer)
-		audioLogger->printf_P(PSTR("Unable to allocate AudioFileSourceBuffer::buffer[]\n"));
-	deallocateBuffer = true;
-	writePtr = 0;
-	readPtr = 0;
-	src = source;
-	length = 0;
-	filled = false;
+	if(buffer == nullptr) {
+		AUDIO_ERROR("Unable to allocate AudioFileSourceBuffer::buffer[]");
+	}
 }
 
-AudioFileSourceBuffer::AudioFileSourceBuffer(AudioFileSource* source, void* inBuff, uint32_t buffSizeBytes)
+void AudioFileSourceBuffer::freeBuffer()
 {
-	buffSize = buffSizeBytes;
-	buffer = (uint8_t*)inBuff;
-	deallocateBuffer = false;
-	writePtr = 0;
-	readPtr = 0;
-	src = source;
-	length = 0;
-	filled = false;
-}
-
-AudioFileSourceBuffer::~AudioFileSourceBuffer()
-{
-	if(deallocateBuffer)
-		free(buffer);
-	buffer = NULL;
+	if(deallocateBuffer) {
+		delete[] buffer;
+	}
+	buffer = nullptr;
 }
 
 bool AudioFileSourceBuffer::seek(int32_t pos, int dir)
@@ -67,9 +50,7 @@ bool AudioFileSourceBuffer::seek(int32_t pos, int dir)
 
 bool AudioFileSourceBuffer::close()
 {
-	if(deallocateBuffer)
-		free(buffer);
-	buffer = NULL;
+	freeBuffer();
 	return src->close();
 }
 

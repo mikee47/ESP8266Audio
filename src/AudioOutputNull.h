@@ -18,50 +18,52 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOOUTPUTNULL_H
-#define _AUDIOOUTPUTNULL_H
+#pragma once
 
 #include "AudioOutput.h"
 
 class AudioOutputNull : public AudioOutput
 {
 public:
-	AudioOutputNull(){};
-	~AudioOutputNull(){};
-	virtual bool begin()
+	bool begin() override
 	{
 		samples = 0;
 		startms = millis();
 		return true;
 	}
-	virtual bool ConsumeSample(int16_t sample[2])
+
+	bool ConsumeSample(int16_t sample[2]) override
 	{
 		(void)sample;
 		samples++;
 		return true;
 	}
-	virtual bool stop()
+
+	bool stop() override
 	{
 		endms = millis();
 		return true;
 	};
+
 	unsigned long GetMilliseconds()
 	{
 		return endms - startms;
 	}
+
 	int GetSamples()
 	{
 		return samples;
 	}
+
 	int GetFrequency()
 	{
 		return hertz;
 	}
 
 protected:
-	unsigned long startms;
-	unsigned long endms;
-	int samples;
+	unsigned long startms = 0;
+	unsigned long endms = 0;
+	int samples = 0;
 };
 
 #endif

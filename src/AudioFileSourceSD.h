@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOFILESOURCESD_H
-#define _AUDIOFILESOURCESD_H
+#pragma once
 
 #include "AudioFileSource.h"
 #include <SD.h>
@@ -42,5 +41,3 @@ public:
 private:
 	File f;
 };
-
-#endif

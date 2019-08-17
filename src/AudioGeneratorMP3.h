@@ -18,8 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATORMP3_H
-#define _AUDIOGENERATORMP3_H
+#pragma once
 
 #include "AudioGenerator.h"
 #include "libmad/config.h"
@@ -28,38 +27,47 @@
 class AudioGeneratorMP3 : public AudioGenerator
 {
 public:
-	AudioGeneratorMP3();
-	AudioGeneratorMP3(void* preallocateSpace, int preallocateSize);
-	virtual ~AudioGeneratorMP3() override;
-	virtual bool begin(AudioFileSource* source, AudioOutput* output) override;
-	virtual bool loop() override;
-	virtual bool stop() override;
-	virtual bool isRunning() override;
+	AudioGeneratorMP3() = default;
+
+	AudioGeneratorMP3(void* preallocateSpace, int preallocateSize)
+		: preallocateSpace(preallocateSpace), preallocateSize(preallocateSize)
+	{
+	}
+
+	~AudioGeneratorMP3()
+	{
+		freeBuffers();
+	}
+
+	bool begin(AudioFileSource* source, AudioOutput* output) override;
+	bool loop() override;
+	bool stop() override;
 
 protected:
-	void* preallocateSpace;
-	int preallocateSize;
+	void* preallocateSpace = nullptr;
+	int preallocateSize = 0;
 
 	const int buffLen = 0x600; // Slightly larger than largest MP3 frame
-	unsigned char* buff;
+	uint8_t* buff = nullptr;
 	int lastReadPos;
 	unsigned int lastRate;
 	int lastChannels;
 
 	// Decoding bits
-	bool madInitted;
-	struct mad_stream* stream;
-	struct mad_frame* frame;
-	struct mad_synth* synth;
+	bool madInitted = false;
+	struct mad_stream* stream = nullptr;
+	struct mad_frame* frame = nullptr;
+	struct mad_synth* synth = nullptr;
 	int samplePtr;
 	int nsCount;
-	int nsCountMax;
+	int nsCountMax = 1152 / 32;
 
 	// The internal helpers
 	enum mad_flow ErrorToFlow();
 	enum mad_flow Input();
 	bool DecodeNextFrame();
 	bool GetOneSample(int16_t sample[2]);
-};
 
-#endif
+private:
+	void freeBuffers();
+};

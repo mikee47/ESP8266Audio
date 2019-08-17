@@ -18,24 +18,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <Arduino.h>
+#include "AudioOutputI2SNoDAC.h"
+
 #ifdef ESP32
 #include "driver/i2s.h"
 #else
 #include <i2s.h>
 #endif
-#include "AudioOutputI2SNoDAC.h"
-
-AudioOutputI2SNoDAC::AudioOutputI2SNoDAC(int port) : AudioOutputI2S(port, false)
-{
-	SetOversampling(32);
-	lastSamp = 0;
-	cumErr = 0;
-}
-
-AudioOutputI2SNoDAC::~AudioOutputI2SNoDAC()
-{
-}
 
 bool AudioOutputI2SNoDAC::SetOversampling(int os)
 {
@@ -93,16 +82,24 @@ bool AudioOutputI2SNoDAC::ConsumeSample(int16_t sample[2])
 	DeltaSigma(ms, dsBuff);
 
 	// Either send complete pulse stream or nothing
+	auto nBytes = sizeof(uint32_t) * (oversample / 32);
 #ifdef ESP32
-	if(!i2s_write_bytes((i2s_port_t)portNo, (const char*)dsBuff, sizeof(uint32_t) * (oversample / 32), 0))
+	if(!i2s_write_bytes((i2s_port_t)portNo, (const char*)dsBuff, nBytes, 0))
 		return false;
+#elif defined(ARCH_ESP8266)
+	if(i2s_available() < nBytes) {
+		return false; // No room
+	}
+	i2s_write(dsBuff, nBytes, 0);
 #else
-	if(!i2s_write_sample_nb(dsBuff[0]))
+	if(!i2s_write_sample_nb(dsBuff[0])) {
 		return false; // No room at the inn
+	}
 	// At this point we've sent in first of possibly 8 32-bits, need to send
 	// remaining ones even if they block.
-	for(int i = 32; i < oversample; i += 32)
+	for(int i = 32; i < oversample; i += 32) {
 		i2s_write_sample(dsBuff[i / 32]);
+	}
 #endif
 	return true;
 }

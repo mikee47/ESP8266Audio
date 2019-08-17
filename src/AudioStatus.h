@@ -18,10 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOSTATUS_H
-#define _AUDIOSTATUS_H
-
-#include <Arduino.h>
+#pragma once
 
 #include "AudioLogger.h"
 
@@ -31,51 +28,54 @@ public:
 	AudioStatus()
 	{
 		ClearCBs();
-	};
-	virtual ~AudioStatus(){};
+	}
+
+	virtual ~AudioStatus()
+	{
+	}
 
 	void ClearCBs()
 	{
-		mdFn = NULL;
-		stFn = NULL;
-	};
+		metadataCallback = nullptr;
+		statusCallback = nullptr;
+	}
 
-	typedef void (*metadataCBFn)(void* cbData, const char* type, bool isUnicode, const char* str);
-	bool RegisterMetadataCB(metadataCBFn f, void* cbData)
+	typedef void (*MetadataCallback)(void* cbData, const char* type, bool isUnicode, const char* str);
+
+	bool RegisterMetadataCB(MetadataCallback f, void* cbData)
 	{
-		mdFn = f;
-		mdData = cbData;
+		metadataCallback = f;
+		metadataCallbackData = cbData;
 		return true;
 	}
 
 	// Returns a unique warning/error code, varying by the object.  The string may be a PSTR, use _P functions!
-	typedef void (*statusCBFn)(void* cbData, int code, const char* string);
-	bool RegisterStatusCB(statusCBFn f, void* cbData)
+	typedef void (*StatusCallback)(void* cbData, int code, const char* string);
+
+	bool RegisterStatusCB(StatusCallback f, void* cbData)
 	{
-		stFn = f;
-		stData = cbData;
+		statusCallback = f;
+		statusCallbackData = cbData;
 		return true;
 	}
 
 	// Safely call the md function, if defined
-	inline void md(const char* type, bool isUnicode, const char* string)
+	void md(const char* type, bool isUnicode, const char* string)
 	{
-		if(mdFn)
-			mdFn(mdData, type, isUnicode, string);
+		if(metadataCallback)
+			metadataCallback(metadataCallbackData, type, isUnicode, string);
 	}
 
 	// Safely call the st function, if defined
-	inline void st(int code, const char* string)
+	void st(int code, const char* string)
 	{
-		if(stFn)
-			stFn(stData, code, string);
+		if(statusCallback)
+			statusCallback(statusCallbackData, code, string);
 	}
 
 private:
-	metadataCBFn mdFn;
-	void* mdData;
-	statusCBFn stFn;
-	void* stData;
+	MetadataCallback metadataCallback;
+	void* metadataCallbackData;
+	StatusCallback statusCallback;
+	void* statusCallbackData;
 };
-
-#endif

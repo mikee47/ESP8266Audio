@@ -20,30 +20,34 @@
 
 #include "AudioOutputSPIFFSWAV.h"
 
-bool AudioOutputSPIFFSWAV::open(const String& filename)
+bool AudioOutputSPIFFSWAV::begin()
 {
 	if(file >= 0) {
 		return false; // Already open
 	}
 
 	file = fileOpen(filename, eFO_CreateNewAlways);
-	return file >= 0;
+	if(file < 0) {
+		return false;
+	}
+	return writeHeader();
 }
 
-void AudioOutputSPIFFSWAV::close()
+bool AudioOutputSPIFFSWAV::stop()
 {
-	if(file >= 0) {
-		fileClose(file);
-		file = -1;
+	if(file < 0) {
+		return true;
 	}
+
+	if(fileSeek(file, 0, eSO_FileStart) == 0) {
+		writeHeader();
+	}
+	fileClose(file);
+	file = -1;
+	return true;
 }
 
 bool AudioOutputSPIFFSWAV::write(const void* src, size_t size)
 {
 	return fileWrite(file, src, size) == int(size);
-}
-
-bool AudioOutputSPIFFSWAV::rewind()
-{
-	return fileSeek(file, 0, eSO_FileStart) == 0;
 }

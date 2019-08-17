@@ -18,10 +18,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _AUDIOGENERATOR_H
-#define _AUDIOGENERATOR_H
+#pragma once
 
-#include <Arduino.h>
 #include "AudioStatus.h"
 #include "AudioFileSource.h"
 #include "AudioOutput.h"
@@ -29,49 +27,50 @@
 class AudioGenerator
 {
 public:
-	AudioGenerator()
+	virtual ~AudioGenerator()
 	{
-		lastSample[0] = 0;
-		lastSample[1] = 0;
-	};
-	virtual ~AudioGenerator(){};
+		stop();
+	}
+
 	virtual bool begin(AudioFileSource* source, AudioOutput* output)
 	{
 		(void)source;
 		(void)output;
 		return false;
-	};
+	}
+
 	virtual bool loop()
 	{
 		return false;
-	};
+	}
+
 	virtual bool stop()
 	{
 		return false;
-	};
+	}
+
 	virtual bool isRunning()
 	{
-		return false;
-	};
+		return running;
+	}
 
 public:
-	virtual bool RegisterMetadataCB(AudioStatus::metadataCBFn fn, void* data)
+	virtual bool RegisterMetadataCB(AudioStatus::MetadataCallback fn, void* data)
 	{
 		return cb.RegisterMetadataCB(fn, data);
 	}
-	virtual bool RegisterStatusCB(AudioStatus::statusCBFn fn, void* data)
+
+	virtual bool RegisterStatusCB(AudioStatus::StatusCallback fn, void* data)
 	{
 		return cb.RegisterStatusCB(fn, data);
 	}
 
 protected:
-	bool running;
-	AudioFileSource* file;
-	AudioOutput* output;
-	int16_t lastSample[2];
+	bool running = false;
+	AudioFileSource* file = nullptr;
+	AudioOutput* output = nullptr;
+	int16_t lastSample[2] = {0};
 
 protected:
 	AudioStatus cb;
 };
-
-#endif

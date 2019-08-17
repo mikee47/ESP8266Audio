@@ -29,27 +29,31 @@
 class AudioOutputWAV : public AudioOutput
 {
 public:
+	AudioOutputWAV() = default;
+
+	AudioOutputWAV(const char* filename) : filename(filename)
+	{
+	}
+
 	~AudioOutputWAV()
 	{
-		close();
+		stop();
 	}
-	bool begin() override;
-	bool ConsumeSample(int16_t sample[2]) override;
-	bool stop() override;
 
-	virtual bool open(const String& filename) = 0;
-	virtual bool write(const void* src, size_t size) = 0;
-	virtual bool rewind() = 0;
-	virtual void close()
-	{
-	}
+	bool ConsumeSample(int16_t sample[2]) override;
 
 	void SetFilename(const char* name)
 	{
 		filename = name;
 	}
 
-private:
+protected:
+	virtual bool write(const void* src, size_t size) = 0;
+
+	// Write header at current position
+	bool writeHeader();
+
+protected:
 	String filename;
 	size_t filePos = 0;
 };

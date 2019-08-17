@@ -18,10 +18,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef AUDIOFILESTREAM_H
-#define AUDIOFILESTREAM_H
+#pragma once
 
-#include <Arduino.h>
 #include "AudioFileSource.h"
 
 class AudioFileStream : public Stream
@@ -48,5 +46,3 @@ private:
 	int len;
 	int ptr;
 };
-
-#endif
