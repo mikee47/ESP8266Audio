@@ -24,26 +24,23 @@
 #include "AudioFileSource.h"
 #include <SD.h>
 
-
 class AudioFileSourceSD : public AudioFileSource
 {
-  public:
-    AudioFileSourceSD();
-    AudioFileSourceSD(const char *filename);
-    virtual ~AudioFileSourceSD() override;
-    
-    virtual bool open(const char *filename) override;
-    virtual uint32_t read(void *data, uint32_t len) override;
-    virtual bool seek(int32_t pos, int dir) override;
-    virtual bool close() override;
-    virtual bool isOpen() override;
-    virtual uint32_t getSize() override;
-    virtual uint32_t getPos() override;
+public:
+	AudioFileSourceSD();
+	AudioFileSourceSD(const char* filename);
+	virtual ~AudioFileSourceSD() override;
 
-  private:
-    File f;
+	virtual bool open(const char* filename) override;
+	virtual uint32_t read(void* data, uint32_t len) override;
+	virtual bool seek(int32_t pos, int dir) override;
+	virtual bool close() override;
+	virtual bool isOpen() override;
+	virtual uint32_t getSize() override;
+	virtual uint32_t getPos() override;
+
+private:
+	File f;
 };
 
-
 #endif
-

@@ -23,23 +23,45 @@
 
 #include "AudioOutput.h"
 
-class AudioOutputNull : public AudioOutput 
+class AudioOutputNull : public AudioOutput
 {
-  public:
-    AudioOutputNull() {};
-    ~AudioOutputNull() {};
-    virtual bool begin() { samples = 0; startms = millis(); return true; }
-    virtual bool ConsumeSample(int16_t sample[2]) { (void)sample; samples++; return true; }
-    virtual bool stop() { endms = millis(); return true; };
-    unsigned long GetMilliseconds() { return endms - startms; }
-    int GetSamples() { return samples; }
-    int GetFrequency() { return hertz; }
+public:
+	AudioOutputNull(){};
+	~AudioOutputNull(){};
+	virtual bool begin()
+	{
+		samples = 0;
+		startms = millis();
+		return true;
+	}
+	virtual bool ConsumeSample(int16_t sample[2])
+	{
+		(void)sample;
+		samples++;
+		return true;
+	}
+	virtual bool stop()
+	{
+		endms = millis();
+		return true;
+	};
+	unsigned long GetMilliseconds()
+	{
+		return endms - startms;
+	}
+	int GetSamples()
+	{
+		return samples;
+	}
+	int GetFrequency()
+	{
+		return hertz;
+	}
 
-  protected:
-    unsigned long startms;
-    unsigned long endms;
-    int samples;
+protected:
+	unsigned long startms;
+	unsigned long endms;
+	int samples;
 };
 
 #endif
-

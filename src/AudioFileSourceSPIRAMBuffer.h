@@ -30,32 +30,30 @@
 
 class AudioFileSourceSPIRAMBuffer : public AudioFileSource
 {
-  public:
-    AudioFileSourceSPIRAMBuffer(AudioFileSource *in, uint8_t csPin, uint32_t bufferBytes);
-    virtual ~AudioFileSourceSPIRAMBuffer() override;
+public:
+	AudioFileSourceSPIRAMBuffer(AudioFileSource* in, uint8_t csPin, uint32_t bufferBytes);
+	virtual ~AudioFileSourceSPIRAMBuffer() override;
 
-    virtual uint32_t read(void *data, uint32_t len) override;
-    virtual bool seek(int32_t pos, int dir) override;
-    virtual bool close() override;
-    virtual bool isOpen() override;
-    virtual uint32_t getSize() override;
-    virtual uint32_t getPos() override;
-    virtual bool loop() override;
+	virtual uint32_t read(void* data, uint32_t len) override;
+	virtual bool seek(int32_t pos, int dir) override;
+	virtual bool close() override;
+	virtual bool isOpen() override;
+	virtual uint32_t getSize() override;
+	virtual uint32_t getPos() override;
+	virtual bool loop() override;
 
-  private:
-    virtual void fill();
+private:
+	virtual void fill();
 
-  private:
-    AudioFileSource *src;
-    ESP8266Spiram *Spiram;
-    uint32_t ramSize;
-    uint32_t writePtr;
-    uint32_t readPtr;
-    uint16_t length;
-    uint32_t bytesAvailable;
-    bool filled;
+private:
+	AudioFileSource* src;
+	ESP8266Spiram* Spiram;
+	uint32_t ramSize;
+	uint32_t writePtr;
+	uint32_t readPtr;
+	uint16_t length;
+	uint32_t bytesAvailable;
+	bool filled;
 };
 
-
 #endif
-

@@ -27,41 +27,39 @@
 
 class AudioGeneratorMP3 : public AudioGenerator
 {
-  public:
-    AudioGeneratorMP3();
-    AudioGeneratorMP3(void *preallocateSpace, int preallocateSize);
-    virtual ~AudioGeneratorMP3() override;
-    virtual bool begin(AudioFileSource *source, AudioOutput *output) override;
-    virtual bool loop() override;
-    virtual bool stop() override;
-    virtual bool isRunning() override;
-    
-  protected:   
-    void *preallocateSpace;
-    int preallocateSize;
+public:
+	AudioGeneratorMP3();
+	AudioGeneratorMP3(void* preallocateSpace, int preallocateSize);
+	virtual ~AudioGeneratorMP3() override;
+	virtual bool begin(AudioFileSource* source, AudioOutput* output) override;
+	virtual bool loop() override;
+	virtual bool stop() override;
+	virtual bool isRunning() override;
 
-    const int buffLen = 0x600; // Slightly larger than largest MP3 frame
-    unsigned char *buff;
-    int lastReadPos;
-    unsigned int lastRate;
-    int lastChannels;
-    
-    // Decoding bits
-    bool madInitted;
-    struct mad_stream *stream;
-    struct mad_frame *frame;
-    struct mad_synth *synth;
-    int samplePtr;
-    int nsCount;
-    int nsCountMax;
+protected:
+	void* preallocateSpace;
+	int preallocateSize;
 
-    // The internal helpers
-    enum mad_flow ErrorToFlow();
-    enum mad_flow Input();
-    bool DecodeNextFrame();
-    bool GetOneSample(int16_t sample[2]);
+	const int buffLen = 0x600; // Slightly larger than largest MP3 frame
+	unsigned char* buff;
+	int lastReadPos;
+	unsigned int lastRate;
+	int lastChannels;
 
+	// Decoding bits
+	bool madInitted;
+	struct mad_stream* stream;
+	struct mad_frame* frame;
+	struct mad_synth* synth;
+	int samplePtr;
+	int nsCount;
+	int nsCountMax;
+
+	// The internal helpers
+	enum mad_flow ErrorToFlow();
+	enum mad_flow Input();
+	bool DecodeNextFrame();
+	bool GetOneSample(int16_t sample[2]);
 };
 
 #endif
-

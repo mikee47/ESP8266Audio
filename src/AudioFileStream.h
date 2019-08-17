@@ -27,22 +27,26 @@
 class AudioFileStream : public Stream
 {
 public:
-  AudioFileStream(AudioFileSource *source, int definedLen);
-  virtual ~AudioFileStream();
+	AudioFileStream(AudioFileSource* source, int definedLen);
+	virtual ~AudioFileStream();
 
 public:
-  // Stream interface - see the Arduino library documentation.
-  virtual int available() override;
-  virtual int read() override;
-  virtual int peek() override;
-  virtual void flush() override;
-  virtual size_t write(uint8_t x) override { (void)x; return 0; };
+	// Stream interface - see the Arduino library documentation.
+	virtual int available() override;
+	virtual int read() override;
+	virtual int peek() override;
+	virtual void flush() override;
+	virtual size_t write(uint8_t x) override
+	{
+		(void)x;
+		return 0;
+	};
 
 private:
-  AudioFileSource *src;
-  int saved;
-  int len;
-  int ptr;
+	AudioFileSource* src;
+	int saved;
+	int len;
+	int ptr;
 };
 
 #endif

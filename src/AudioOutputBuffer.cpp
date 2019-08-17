@@ -21,69 +21,68 @@
 #include <Arduino.h>
 #include "AudioOutputBuffer.h"
 
-AudioOutputBuffer::AudioOutputBuffer(int buffSizeSamples, AudioOutput *dest)
+AudioOutputBuffer::AudioOutputBuffer(int buffSizeSamples, AudioOutput* dest)
 {
-  buffSize = buffSizeSamples;
-  leftSample = (int16_t*)malloc(sizeof(int16_t) * buffSize);
-  rightSample = (int16_t*)malloc(sizeof(int16_t) * buffSize);
-  writePtr = 0;
-  readPtr = 0;
-  sink = dest;
+	buffSize = buffSizeSamples;
+	leftSample = (int16_t*)malloc(sizeof(int16_t) * buffSize);
+	rightSample = (int16_t*)malloc(sizeof(int16_t) * buffSize);
+	writePtr = 0;
+	readPtr = 0;
+	sink = dest;
 }
 
 AudioOutputBuffer::~AudioOutputBuffer()
 {
-  free(leftSample);
-  free(rightSample);
+	free(leftSample);
+	free(rightSample);
 }
 
 bool AudioOutputBuffer::SetRate(int hz)
 {
-  return sink->SetRate(hz);
+	return sink->SetRate(hz);
 }
 
 bool AudioOutputBuffer::SetBitsPerSample(int bits)
 {
-  return sink->SetBitsPerSample(bits);
+	return sink->SetBitsPerSample(bits);
 }
 
 bool AudioOutputBuffer::SetChannels(int channels)
 {
-  return sink->SetChannels(channels);
+	return sink->SetChannels(channels);
 }
 
 bool AudioOutputBuffer::begin()
 {
-  filled = false;
-  return sink->begin();
+	filled = false;
+	return sink->begin();
 }
 
 bool AudioOutputBuffer::ConsumeSample(int16_t sample[2])
 {
-  // First, try and fill I2S...
-  if (filled) {
-    while (readPtr != writePtr) {
-      int16_t s[2] = {leftSample[readPtr], rightSample[readPtr]};
-      if (!sink->ConsumeSample(s)) break; // Can't stuff any more in I2S...
-      readPtr = (readPtr + 1) % buffSize;
-    }
-  }
+	// First, try and fill I2S...
+	if(filled) {
+		while(readPtr != writePtr) {
+			int16_t s[2] = {leftSample[readPtr], rightSample[readPtr]};
+			if(!sink->ConsumeSample(s))
+				break; // Can't stuff any more in I2S...
+			readPtr = (readPtr + 1) % buffSize;
+		}
+	}
 
-  // Now, do we have space for a new sample?
-  int nextWritePtr = (writePtr + 1) % buffSize;
-  if (nextWritePtr == readPtr) {
-    filled = true;
-    return false;
-  }
-  leftSample[writePtr] = sample[LEFTCHANNEL];
-  rightSample[writePtr] = sample[RIGHTCHANNEL];
-  writePtr = nextWritePtr;
-  return true;
+	// Now, do we have space for a new sample?
+	int nextWritePtr = (writePtr + 1) % buffSize;
+	if(nextWritePtr == readPtr) {
+		filled = true;
+		return false;
+	}
+	leftSample[writePtr] = sample[LEFTCHANNEL];
+	rightSample[writePtr] = sample[RIGHTCHANNEL];
+	writePtr = nextWritePtr;
+	return true;
 }
 
 bool AudioOutputBuffer::stop()
 {
-  return sink->stop();
+	return sink->stop();
 }
-
-

@@ -22,78 +22,90 @@
 
 AudioFileSourcePROGMEM::AudioFileSourcePROGMEM()
 {
-  opened = false;
-  progmemData = NULL;
-  progmemLen = 0;
-  filePointer = 0;
+	opened = false;
+	progmemData = NULL;
+	progmemLen = 0;
+	filePointer = 0;
 }
 
-AudioFileSourcePROGMEM::AudioFileSourcePROGMEM(const void *data, uint32_t len)
+AudioFileSourcePROGMEM::AudioFileSourcePROGMEM(const void* data, uint32_t len)
 {
-  open(data, len);
+	open(data, len);
 }
 
 AudioFileSourcePROGMEM::~AudioFileSourcePROGMEM()
 {
 }
 
-bool AudioFileSourcePROGMEM::open(const void *data, uint32_t len)
+bool AudioFileSourcePROGMEM::open(const void* data, uint32_t len)
 {
-  if (!data || !len) return false;
+	if(!data || !len)
+		return false;
 
-  opened = true;
-  progmemData = data;
-  progmemLen = len;
-  filePointer = 0;
-  return true;
+	opened = true;
+	progmemData = data;
+	progmemLen = len;
+	filePointer = 0;
+	return true;
 }
 
 uint32_t AudioFileSourcePROGMEM::getSize()
 {
-  if (!opened) return 0;
-  return progmemLen;
+	if(!opened)
+		return 0;
+	return progmemLen;
 }
 
 bool AudioFileSourcePROGMEM::isOpen()
 {
-  return opened;
+	return opened;
 }
 
 bool AudioFileSourcePROGMEM::close()
 {
-  opened = false;
-  progmemData = NULL;
-  progmemLen = 0;
-  filePointer = 0;
-  return true;
-}  
+	opened = false;
+	progmemData = NULL;
+	progmemLen = 0;
+	filePointer = 0;
+	return true;
+}
 
 bool AudioFileSourcePROGMEM::seek(int32_t pos, int dir)
 {
-  if (!opened) return false;
-  uint32_t newPtr;
-  switch (dir) {
-    case SEEK_SET: newPtr = pos; break;
-    case SEEK_CUR: newPtr = filePointer + pos; break;
-    case SEEK_END: newPtr = progmemLen - pos; break;
-    default: return false;
-  }
-  if (newPtr > progmemLen) return false;
-  filePointer = newPtr;
-  return true;
+	if(!opened)
+		return false;
+	uint32_t newPtr;
+	switch(dir) {
+	case SEEK_SET:
+		newPtr = pos;
+		break;
+	case SEEK_CUR:
+		newPtr = filePointer + pos;
+		break;
+	case SEEK_END:
+		newPtr = progmemLen - pos;
+		break;
+	default:
+		return false;
+	}
+	if(newPtr > progmemLen)
+		return false;
+	filePointer = newPtr;
+	return true;
 }
 
-uint32_t AudioFileSourcePROGMEM::read(void *data, uint32_t len)
+uint32_t AudioFileSourcePROGMEM::read(void* data, uint32_t len)
 {
-  if (!opened) return 0;
-  if (filePointer >= progmemLen) return 0;
+	if(!opened)
+		return 0;
+	if(filePointer >= progmemLen)
+		return 0;
 
-  uint32_t toRead = progmemLen - filePointer;
-  if (toRead > len) toRead = len;
+	uint32_t toRead = progmemLen - filePointer;
+	if(toRead > len)
+		toRead = len;
 
-  memcpy_P(data, reinterpret_cast<const uint8_t*>(progmemData)+filePointer, toRead);
-  filePointer += toRead;
-  return toRead;
+	memcpy_P(data, reinterpret_cast<const uint8_t*>(progmemData) + filePointer, toRead);
+	filePointer += toRead;
+	return toRead;
 }
-
-

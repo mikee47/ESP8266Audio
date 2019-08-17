@@ -23,40 +23,37 @@
 
 #include "AudioFileSource.h"
 
-
 class AudioFileSourceBuffer : public AudioFileSource
 {
-  public:
-    AudioFileSourceBuffer(AudioFileSource *in, uint32_t bufferBytes);
-    AudioFileSourceBuffer(AudioFileSource *in, void *buffer, uint32_t bufferBytes); // Pre-allocated buffer by app
-    virtual ~AudioFileSourceBuffer() override;
-    
-    virtual uint32_t read(void *data, uint32_t len) override;
-    virtual bool seek(int32_t pos, int dir) override;
-    virtual bool close() override;
-    virtual bool isOpen() override;
-    virtual uint32_t getSize() override;
-    virtual uint32_t getPos() override;
-    virtual bool loop() override;
+public:
+	AudioFileSourceBuffer(AudioFileSource* in, uint32_t bufferBytes);
+	AudioFileSourceBuffer(AudioFileSource* in, void* buffer, uint32_t bufferBytes); // Pre-allocated buffer by app
+	virtual ~AudioFileSourceBuffer() override;
 
-    virtual uint32_t getFillLevel();
+	virtual uint32_t read(void* data, uint32_t len) override;
+	virtual bool seek(int32_t pos, int dir) override;
+	virtual bool close() override;
+	virtual bool isOpen() override;
+	virtual uint32_t getSize() override;
+	virtual uint32_t getPos() override;
+	virtual bool loop() override;
 
-    enum { STATUS_FILLING=2, STATUS_UNDERFLOW };
+	virtual uint32_t getFillLevel();
 
-  private:
-    virtual void fill();
+	enum { STATUS_FILLING = 2, STATUS_UNDERFLOW };
 
-  private:
-    AudioFileSource *src;
-    uint32_t buffSize;
-    uint8_t *buffer;
-    bool deallocateBuffer;
-    uint32_t writePtr;
-    uint32_t readPtr;
-    uint32_t length;
-    bool filled;
+private:
+	virtual void fill();
+
+private:
+	AudioFileSource* src;
+	uint32_t buffSize;
+	uint8_t* buffer;
+	bool deallocateBuffer;
+	uint32_t writePtr;
+	uint32_t readPtr;
+	uint32_t length;
+	bool filled;
 };
 
-
 #endif
-

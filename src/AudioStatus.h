@@ -27,31 +27,55 @@
 
 class AudioStatus
 {
-  public:
-    AudioStatus() { ClearCBs(); };
-    virtual ~AudioStatus() {};
+public:
+	AudioStatus()
+	{
+		ClearCBs();
+	};
+	virtual ~AudioStatus(){};
 
-    void ClearCBs() { mdFn = NULL; stFn = NULL; };
+	void ClearCBs()
+	{
+		mdFn = NULL;
+		stFn = NULL;
+	};
 
-    typedef void (*metadataCBFn)(void *cbData, const char *type, bool isUnicode, const char *str);
-    bool RegisterMetadataCB(metadataCBFn f, void *cbData) { mdFn = f; mdData = cbData; return true; }
+	typedef void (*metadataCBFn)(void* cbData, const char* type, bool isUnicode, const char* str);
+	bool RegisterMetadataCB(metadataCBFn f, void* cbData)
+	{
+		mdFn = f;
+		mdData = cbData;
+		return true;
+	}
 
-    // Returns a unique warning/error code, varying by the object.  The string may be a PSTR, use _P functions!
-    typedef void (*statusCBFn)(void *cbData, int code, const char *string);
-    bool RegisterStatusCB(statusCBFn f, void *cbData) { stFn = f; stData = cbData; return true; }
+	// Returns a unique warning/error code, varying by the object.  The string may be a PSTR, use _P functions!
+	typedef void (*statusCBFn)(void* cbData, int code, const char* string);
+	bool RegisterStatusCB(statusCBFn f, void* cbData)
+	{
+		stFn = f;
+		stData = cbData;
+		return true;
+	}
 
-    // Safely call the md function, if defined
-    inline void md(const char *type, bool isUnicode, const char *string) { if (mdFn) mdFn(mdData, type, isUnicode, string); }
+	// Safely call the md function, if defined
+	inline void md(const char* type, bool isUnicode, const char* string)
+	{
+		if(mdFn)
+			mdFn(mdData, type, isUnicode, string);
+	}
 
-    // Safely call the st function, if defined
-    inline void st(int code, const char *string) { if (stFn) stFn(stData, code, string); }
+	// Safely call the st function, if defined
+	inline void st(int code, const char* string)
+	{
+		if(stFn)
+			stFn(stData, code, string);
+	}
 
-  private:
-    metadataCBFn mdFn;
-    void *mdData;
-    statusCBFn stFn;
-    void *stData;
+private:
+	metadataCBFn mdFn;
+	void* mdData;
+	statusCBFn stFn;
+	void* stData;
 };
 
 #endif
-

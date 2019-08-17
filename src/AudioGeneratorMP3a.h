@@ -26,32 +26,32 @@
 
 class AudioGeneratorMP3a : public AudioGenerator
 {
-  public:
-    AudioGeneratorMP3a();
-    virtual ~AudioGeneratorMP3a() override;
-    virtual bool begin(AudioFileSource *source, AudioOutput *output) override;
-    virtual bool loop() override;
-    virtual bool stop() override;
-    virtual bool isRunning() override;
+public:
+	AudioGeneratorMP3a();
+	virtual ~AudioGeneratorMP3a() override;
+	virtual bool begin(AudioFileSource* source, AudioOutput* output) override;
+	virtual bool loop() override;
+	virtual bool stop() override;
+	virtual bool isRunning() override;
 
-  protected:
-    // Helix MP3 decoder
-    HMP3Decoder hMP3Decoder;
+protected:
+	// Helix MP3 decoder
+	HMP3Decoder hMP3Decoder;
 
-    // Input buffering
-    uint8_t buff[1600]; // File buffer required to store at least a whole compressed frame
-    int16_t buffValid;
-    int16_t lastFrameEnd;
-    bool FillBufferWithValidFrame(); // Read until we get a valid syncword and min(feof, 2048) butes in the buffer
+	// Input buffering
+	uint8_t buff[1600]; // File buffer required to store at least a whole compressed frame
+	int16_t buffValid;
+	int16_t lastFrameEnd;
+	bool FillBufferWithValidFrame(); // Read until we get a valid syncword and min(feof, 2048) butes in the buffer
 
-    // Output buffering
-    int16_t outSample[1152 * 2]; // Interleaved L/R
-    int16_t validSamples;
-    int16_t curSample;
+	// Output buffering
+	int16_t outSample[1152 * 2]; // Interleaved L/R
+	int16_t validSamples;
+	int16_t curSample;
 
-    // Each frame may change this if they're very strange, I guess
-    unsigned int lastRate;
-    int lastChannels;
+	// Each frame may change this if they're very strange, I guess
+	unsigned int lastRate;
+	int lastChannels;
 };
 
 #endif

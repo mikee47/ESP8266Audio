@@ -27,71 +27,73 @@
 
 AudioFileSourceSTDIO::AudioFileSourceSTDIO()
 {
-  f = NULL;
-  srand(time(NULL));
+	f = NULL;
+	srand(time(NULL));
 }
 
-AudioFileSourceSTDIO::AudioFileSourceSTDIO(const char *filename)
+AudioFileSourceSTDIO::AudioFileSourceSTDIO(const char* filename)
 {
-  open(filename);
+	open(filename);
 }
 
-bool AudioFileSourceSTDIO::open(const char *filename)
+bool AudioFileSourceSTDIO::open(const char* filename)
 {
-  f = fopen(filename, "rb");
-  return f;
+	f = fopen(filename, "rb");
+	return f;
 }
 
 AudioFileSourceSTDIO::~AudioFileSourceSTDIO()
 {
-  if (f) fclose(f);
-  f = NULL;
+	if(f)
+		fclose(f);
+	f = NULL;
 }
 
-uint32_t AudioFileSourceSTDIO::read(void *data, uint32_t len)
+uint32_t AudioFileSourceSTDIO::read(void* data, uint32_t len)
 {
-//  if (rand() % 100 == 69) { // Give 0 data 1%
-//    printf("0 read\n");
-//    len = 0;
-//  } else if (rand() % 100 == 1) { // Give short reads 1%
-//    printf("0 read\n");
-//    len = 0;
-//  }
-  int ret = fread(reinterpret_cast<uint8_t*>(data), 1, len, f);
-//  if (ret && rand() % 100 < 5 ) {
-//    // We're really mean...throw bad data in the mix
-//    printf("bad data\n");
-//    for (int i=0; i<100; i++)
-//      *(reinterpret_cast<uint8_t*>(data) + (rand() % ret)) = rand();
-//  }
-  return ret;
+	//  if (rand() % 100 == 69) { // Give 0 data 1%
+	//    printf("0 read\n");
+	//    len = 0;
+	//  } else if (rand() % 100 == 1) { // Give short reads 1%
+	//    printf("0 read\n");
+	//    len = 0;
+	//  }
+	int ret = fread(reinterpret_cast<uint8_t*>(data), 1, len, f);
+	//  if (ret && rand() % 100 < 5 ) {
+	//    // We're really mean...throw bad data in the mix
+	//    printf("bad data\n");
+	//    for (int i=0; i<100; i++)
+	//      *(reinterpret_cast<uint8_t*>(data) + (rand() % ret)) = rand();
+	//  }
+	return ret;
 }
 
 bool AudioFileSourceSTDIO::seek(int32_t pos, int dir)
 {
-  return fseek(f, pos, dir);
+	return fseek(f, pos, dir);
 }
 
 bool AudioFileSourceSTDIO::close()
 {
-  fclose(f);
-  f = NULL;
-  return true;
+	fclose(f);
+	f = NULL;
+	return true;
 }
 
 bool AudioFileSourceSTDIO::isOpen()
 {
-  return f?true:false;
+	return f ? true : false;
 }
 
 uint32_t AudioFileSourceSTDIO::getSize()
 {
-  if (!f) return 0;
-  uint32_t p = ftell(f);
-  fseek(f, 0, SEEK_END);
-  uint32_t len = ftell(f);
-  fseek(f, p, SEEK_SET);
-  return len;
+	if(!f)
+		return 0;
+	uint32_t p = ftell(f);
+	fseek(f, 0, SEEK_END);
+	uint32_t len = ftell(f);
+	fseek(f, p, SEEK_SET);
+	return len;
 }
 
 uint32_t getPos()
@@ -102,6 +104,5 @@ uint32_t getPos()
 	int pos = ftell(f);
 	return (pos >= 0) ? pos : 0;
 }
-
 
 #endif

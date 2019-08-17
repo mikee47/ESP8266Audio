@@ -28,26 +28,50 @@
 
 class AudioGenerator
 {
-  public:
-    AudioGenerator() { lastSample[0] = 0; lastSample[1] = 0; };
-    virtual ~AudioGenerator() {};
-    virtual bool begin(AudioFileSource *source, AudioOutput *output) { (void)source; (void)output; return false; };
-    virtual bool loop() { return false; };
-    virtual bool stop() { return false; };
-    virtual bool isRunning() { return false;};
+public:
+	AudioGenerator()
+	{
+		lastSample[0] = 0;
+		lastSample[1] = 0;
+	};
+	virtual ~AudioGenerator(){};
+	virtual bool begin(AudioFileSource* source, AudioOutput* output)
+	{
+		(void)source;
+		(void)output;
+		return false;
+	};
+	virtual bool loop()
+	{
+		return false;
+	};
+	virtual bool stop()
+	{
+		return false;
+	};
+	virtual bool isRunning()
+	{
+		return false;
+	};
 
-  public:
-    virtual bool RegisterMetadataCB(AudioStatus::metadataCBFn fn, void *data) { return cb.RegisterMetadataCB(fn, data); }
-    virtual bool RegisterStatusCB(AudioStatus::statusCBFn fn, void *data) { return cb.RegisterStatusCB(fn, data); }
+public:
+	virtual bool RegisterMetadataCB(AudioStatus::metadataCBFn fn, void* data)
+	{
+		return cb.RegisterMetadataCB(fn, data);
+	}
+	virtual bool RegisterStatusCB(AudioStatus::statusCBFn fn, void* data)
+	{
+		return cb.RegisterStatusCB(fn, data);
+	}
 
-  protected:
-    bool running;
-    AudioFileSource *file;
-    AudioOutput *output;
-    int16_t lastSample[2];
+protected:
+	bool running;
+	AudioFileSource* file;
+	AudioOutput* output;
+	int16_t lastSample[2];
 
-  protected:
-    AudioStatus cb;
+protected:
+	AudioStatus cb;
 };
 
 #endif
