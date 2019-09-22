@@ -141,14 +141,14 @@ bool AudioGeneratorMP3::GetOneSample(int16_t sample[2])
 	return true;
 }
 
-#include <PolledTimers.h>
+#include <Platform/Timers.h>
 
 bool AudioGeneratorMP3::loop()
 {
-	ElapseTimer timer(10000);
+	OneShotFastMs timer(10);
 
 	// First, try and push in the stored sample.  If we can't, then punt and try later
-	while(running && output->ConsumeSample(lastSample) && !timer.isExpired()) {
+	while(running && output->ConsumeSample(lastSample) && !timer.expired()) {
 		// Try and stuff the buffer one sample at a time
 		// Decode next frame if we're beyond the existing generated data
 		if((samplePtr >= synth->pcm.length) && (nsCount >= nsCountMax)) {
